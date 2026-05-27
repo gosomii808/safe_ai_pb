@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -10,4 +5,70 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum EventCategory {
+  INTEREST_RATE
+  INFLATION
+  EMPLOYMENT
+  GDP
+  POLICY
+  EARNINGS
+  OTHER
+}
+
+enum ImportanceLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model EconomicEvent {
+  id               String               @id @default(cuid())
+  eventDate        DateTime
+  title            String
+  category         EventCategory
+  country          String
+  importance       ImportanceLevel
+  description      String
+  affectedAssets   String
+  source           String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  impactSummaries  EventImpactSummary[]
+
+  @@index([eventDate])
+  @@index([category])
+  @@index([importance])
+}
+
+model EventImpactRule {
+  id             String        @id @default(cuid())
+  eventCategory  EventCategory
+  condition      String
+  affectedAsset  String
+  expectedImpact String
+  explanation    String
+  riskLevel      RiskLevel
+  createdAt      DateTime      @default(now())
+
+  @@index([eventCategory])
+}
+
+model EventImpactSummary {
+  id                String        @id @default(cuid())
+  eventId           String
+  summaryText       String
+  relatedMarketData String?
+  createdAt         DateTime      @default(now())
+  event             EconomicEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }

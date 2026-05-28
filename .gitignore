@@ -78,6 +78,8 @@ __pycache__/
 # =========================
 # Data
 # =========================
+data/raw/
+data/processed/
 backend/data/processed/
 
 # 원본 CSV가 너무 크면 아래 줄도 활성화

@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { EventsService } from './events.service';
-import { GetEventsQueryDto } from './dto/get-events-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { eventSeeds, ruleSeeds } from './data/events.seed';
+import { GetEventsQueryDto } from './dto/get-events-query.dto';
+import { EventsService } from './events.service';
 
 @Controller('events')
 export class EventsController {
@@ -21,6 +21,21 @@ export class EventsController {
     return this.eventsService.getImpactSummary();
   }
 
+  @Get('macro-series')
+  getMacroSeries(@Query('limit') limit?: string) {
+    return this.eventsService.getMacroSeries(limit ? Number(limit) : undefined);
+  }
+
+  @Get('sectors/sensitivity')
+  getSectorSensitivity() {
+    return this.eventsService.getSectorSensitivity();
+  }
+
+  @Get(':id/reaction')
+  getMarketReactionByEventId(@Param('id') id: string) {
+    return this.eventsService.getMarketReactionByEventId(id);
+  }
+
   @Get(':id')
   getEventById(@Param('id') id: string) {
     return this.eventsService.getEventById(id);
@@ -28,13 +43,11 @@ export class EventsController {
 
   @Post('seed')
   async seedEvents() {
-    await this.prisma.eventImpactSummary.deleteMany();
     await this.prisma.eventImpactRule.deleteMany();
     await this.prisma.economicEvent.deleteMany();
 
-    await this.prisma.eventImpactRule.createMany({ data: ruleSeeds as never[] });
+    const createdEvents: { id: string }[] = [];
 
-    const createdEvents = [];
     for (const seed of eventSeeds) {
       const created = await this.prisma.economicEvent.create({
         data: {
@@ -43,17 +56,20 @@ export class EventsController {
         } as never,
       });
 
-      await this.prisma.eventImpactSummary.create({
-        data: {
-          eventId: created.id,
-          summaryText: `${seed.title} 관련 기본 영향 요약이 생성되었습니다.`,
-          relatedMarketData: '{"market":"mock"}',
-        },
+      await this.prisma.eventImpactRule.createMany({
+        data: ruleSeeds.map((rule) => ({
+          ...rule,
+          economicEventId: created.id,
+        })) as never[],
       });
 
       createdEvents.push(created);
     }
 
-    return { message: 'Seed data created', events: createdEvents.length, rules: ruleSeeds.length };
+    return {
+      message: 'Seed data created',
+      events: createdEvents.length,
+      rules: createdEvents.length * ruleSeeds.length,
+    };
   }
 }

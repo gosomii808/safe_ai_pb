@@ -12,7 +12,15 @@ export class GetEventsQueryDto {
 
   @IsOptional()
   @Transform(({ value }) => String(value).toUpperCase())
-  @IsIn(['INTEREST_RATE', 'INFLATION', 'EMPLOYMENT', 'GDP', 'POLICY', 'EARNINGS', 'OTHER'])
+  @IsIn([
+    'INTEREST_RATE',
+    'INFLATION',
+    'EMPLOYMENT',
+    'GDP',
+    'POLICY',
+    'EARNINGS',
+    'OTHER',
+  ])
   category?: string;
 
   @IsOptional()

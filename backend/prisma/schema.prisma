@@ -115,29 +115,46 @@ model PortfolioAnalysisSnapshot {
 }
 
 model MarketPrice {
-  id        String   @id @default(cuid())
-  market    String
-  ticker    String
-  price     Float
-  currency  String
-  priceDate DateTime
-  source    String?
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  market       String
+  ticker       String
+  stockName    String?
+  price        Float
+  openPrice    Float?
+  highPrice    Float?
+  lowPrice     Float?
+  volume       Float?
+  tradingValue Float?
+  marketCap    Float?
+  change       Float?
+  changeRate   Float?
+  currency     String
+  priceDate    DateTime
+  source       String?
+  createdAt    DateTime @default(now())
 
   @@unique([market, ticker, priceDate])
   @@index([ticker, priceDate])
 }
 
 model MarketIndex {
-  id         String   @id @default(cuid())
-  indexCode  String
-  indexName  String
-  value      Float
-  change     Float?
-  changeRate Float?
-  indexDate  DateTime
-  source     String?
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  indexCode    String
+  indexClass   String?
+  indexName    String
+  market       String?
+  openValue    Float?
+  highValue    Float?
+  lowValue     Float?
+  value        Float
+  change       Float?
+  changeRate   Float?
+  volume       Float?
+  tradingValue Float?
+  marketCap    Float?
+  indexDate    DateTime
+  source       String?
+  createdAt    DateTime @default(now())
 
   @@unique([indexCode, indexDate])
   @@index([indexDate])
@@ -147,8 +164,10 @@ model ValuationIndicator {
   id            String   @id @default(cuid())
   market        String
   ticker        String
+  indexName     String?
   per           Float?
   pbr           Float?
+  dividendYield Float?
   eps           Float?
   bps           Float?
   indicatorDate DateTime
@@ -159,14 +178,22 @@ model ValuationIndicator {
 }
 
 model ForeignOwnership {
-  id             String   @id @default(cuid())
-  market         String
-  ticker         String
-  ownershipRatio Float
-  netBuyAmount   Float?
-  ownershipDate  DateTime
-  source         String?
-  createdAt      DateTime @default(now())
+  id                           String   @id @default(cuid())
+  market                       String
+  ticker                       String
+  stockName                    String?
+  listedShares                 Float?
+  foreignHoldingShares         Float?
+  foreignLimitShares           Float?
+  foreignLimitExhaustionRatio  Float?
+  ownershipRatio               Float
+  closePrice                   Float?
+  change                       Float?
+  changeRate                   Float?
+  netBuyAmount                 Float?
+  ownershipDate                DateTime
+  source                       String?
+  createdAt                    DateTime @default(now())
 
   @@unique([market, ticker, ownershipDate])
 }
@@ -174,6 +201,9 @@ model ForeignOwnership {
 model YahooPrice {
   id        String   @id @default(cuid())
   symbol    String
+  assetType String?
+  currency  String?
+  source    String?
   open      Float?
   high      Float?
   low       Float?
@@ -190,19 +220,79 @@ model YahooPrice {
 model EconomicEvent {
   id             String            @id @default(cuid())
   eventDate      DateTime
+  releaseDate    DateTime?
+  releaseTime    String?
+  targetPeriod   String?
+  eventType      String?
   title          String
   category       EventCategory
   country        String
   importance     ImportanceLevel
+  actualValue    Float?
+  forecastValue  Float?
+  previousValue  Float?
+  decisionType   String?
+  changeBp       Float?
+  surpriseBp     Float?
   description    String
   affectedAssets String
   source         String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   impactRules    EventImpactRule[]
+  marketReaction EventMarketReaction?
 
   @@unique([eventDate, title, country])
   @@index([eventDate])
+}
+
+model FxRate {
+  id           String   @id @default(cuid())
+  date         DateTime
+  currencyPair String
+  exchangeRate Float
+  openPrice    Float?
+  highPrice    Float?
+  lowPrice     Float?
+  closePrice   Float?
+  source       String?
+  createdAt    DateTime @default(now())
+
+  @@unique([currencyPair, date])
+  @@index([date])
+}
+
+model InterestRate {
+  id            String   @id @default(cuid())
+  date          DateTime
+  country       String
+  rateType      String
+  rateName      String
+  rateValue     Float?
+  releaseDate   DateTime?
+  effectiveDate DateTime?
+  decisionType  String?
+  previousRate  Float?
+  changeBp      Float?
+  source        String?
+  createdAt     DateTime @default(now())
+
+  @@unique([date, country, rateType, rateName, source])
+  @@index([country, rateType, date])
+}
+
+model InvestorFlow {
+  id           String   @id @default(cuid())
+  date         DateTime
+  ticker       String?
+  stockName    String?
+  investorType String
+  netBuyAmount Float?
+  source       String?
+  createdAt    DateTime @default(now())
+
+  @@unique([date, ticker, stockName, investorType])
+  @@index([date])
 }
 
 model EventImpactRule {
@@ -219,6 +309,57 @@ model EventImpactRule {
 
   @@unique([economicEventId, condition, affectedAsset])
   @@index([eventCategory])
+}
+
+model DailyMarketMacroPrice {
+  date         DateTime @id
+  kospiIndex   Float?   @map("kospi_index")
+  sp500Index   Float?   @map("sp500_index")
+  nasdaqIndex  Float?   @map("nasdaq_index")
+  usdKrw       Float?   @map("usd_krw")
+  krBond3y     Float?   @map("kr_bond_3y")
+  usBond10y    Float?   @map("us_bond_10y")
+  krBaseRate   Float?   @map("kr_base_rate")
+  usBaseRate   Float?   @map("us_base_rate")
+  spyEtfClose  Float?   @map("spy_etf_close")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("daily_market_macro_prices")
+}
+
+model EventMarketReaction {
+  id                 String        @id @default(cuid())
+  economicEventId    String        @unique @map("economic_event_id")
+  kospiTMinus5       Float?        @map("kospi_t_minus_5")
+  kospiTMinus4       Float?        @map("kospi_t_minus_4")
+  kospiTMinus3       Float?        @map("kospi_t_minus_3")
+  kospiTMinus2       Float?        @map("kospi_t_minus_2")
+  kospiTMinus1       Float?        @map("kospi_t_minus_1")
+  kospiT0            Float?        @map("kospi_t_0")
+  kospiTPlus1        Float?        @map("kospi_t_plus_1")
+  kospiTPlus2        Float?        @map("kospi_t_plus_2")
+  kospiTPlus3        Float?        @map("kospi_t_plus_3")
+  kospiTPlus4        Float?        @map("kospi_t_plus_4")
+  kospiTPlus5        Float?        @map("kospi_t_plus_5")
+  kospiReturnD1Pct   Float?        @map("kospi_return_d1_pct")
+  kospiReturnD5Pct   Float?        @map("kospi_return_d5_pct")
+  usdKrwReturnD1Pct  Float?        @map("usd_krw_return_d1_pct")
+  updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at")
+  economicEvent      EconomicEvent @relation(fields: [economicEventId], references: [id], onDelete: Cascade)
+
+  @@map("event_market_reactions")
+}
+
+model SectorEventSensitivity {
+  sector      String
+  eventColumn String   @map("event_column")
+  avgAbsPct   Float?   @map("avg_abs_pct")
+  eventCount  Int      @map("event_count")
+  score       Int
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@id([sector, eventColumn])
+  @@map("sector_event_sensitivity")
 }
 
 model AccessLog {

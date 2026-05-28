@@ -5,9 +5,18 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { EventsModule } from './events/events.module';
 import { SecurityModule } from './security/security.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
+import { AiReportModule } from './ai-report/ai-report.module';
 
 @Module({
-  imports: [PrismaModule, SecurityModule, OnboardingModule, EventsModule],
+  imports: [
+    PrismaModule,
+    SecurityModule,
+    OnboardingModule,
+    EventsModule,
+    PortfolioModule,
+    AiReportModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

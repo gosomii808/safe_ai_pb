@@ -1,4 +1,5 @@
 import { OnboardingPayload } from "@/lib/onboarding-types"
+import type { AiReportResponse } from "@/lib/ai-report-types"
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -20,6 +21,25 @@ export async function submitOnboarding(
     },
     body: JSON.stringify(payload),
   })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export async function getLatestAiReport(
+  userId: string,
+  refine = false
+): Promise<AiReportResponse> {
+  const params = new URLSearchParams({ userId })
+  if (refine) params.set("refine", "true")
+
+  const response = await fetch(
+    `${API_BASE_URL}/ai-report/latest?${params.toString()}`,
+    { cache: "no-store" }
+  )
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))

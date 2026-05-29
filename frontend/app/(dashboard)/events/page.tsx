@@ -101,8 +101,8 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [startDate, setStartDate] = useState("")
-  const [category, setCategory] = useState("")
   const [showAllEvents, setShowAllEvents] = useState(false)
+  const [fetchTrigger, setFetchTrigger] = useState(0)
 
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
@@ -122,7 +122,6 @@ export default function EventsPage() {
         setLoading(true)
         const params = new URLSearchParams()
         if (startDate) params.set("startDate", startDate)
-        if (category) params.set("category", category)
 
         const [eventsRes, summaryRes, sensitivityRes, macroRes] =
           await Promise.all([
@@ -153,7 +152,7 @@ export default function EventsPage() {
     }
 
     fetchData()
-  }, [startDate, category])
+  }, [fetchTrigger])
 
   const empty = useMemo(
     () => !loading && events.length === 0,
@@ -186,19 +185,6 @@ export default function EventsPage() {
         </div>
       </div>
 
-      <div className="glass-card grid gap-3 rounded-2xl p-4 sm:grid-cols-2">
-        <Input
-          type="date"
-          value={startDate}
-          onChange={(event) => setStartDate(event.target.value)}
-        />
-        <Input
-          placeholder="카테고리 예: INTEREST_RATE"
-          value={category}
-          onChange={(event) => setCategory(event.target.value.toUpperCase())}
-        />
-      </div>
-
       {error && (
         <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm">
           {error}
@@ -208,9 +194,26 @@ export default function EventsPage() {
       {/* 시장·매크로 추이 & 섹터 민감도 (위로 이동) */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
         <div className="glass-card rounded-2xl p-5">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">시장·매크로 추이</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">시장·매크로 추이</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                className="h-8 max-w-[160px] text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => setFetchTrigger((n) => n + 1)}
+                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                보기
+              </button>
+            </div>
           </div>
           <div className="mt-4 h-72">
             {macroSeries.length > 0 ? (

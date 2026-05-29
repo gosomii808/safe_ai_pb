@@ -41,6 +41,11 @@ export class EventsController {
     return this.eventsService.getEventById(id);
   }
 
+  @Get(':userId/event-study')
+  getEventStudy(@Param('userId') userId: string) {
+    return this.eventsService.getEventStudy(userId);
+  }
+
   @Post('seed')
   async seedEvents() {
     await this.prisma.eventImpactRule.deleteMany();

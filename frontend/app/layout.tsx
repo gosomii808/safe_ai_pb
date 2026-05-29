@@ -7,7 +7,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'SafePB AI - AI 기반 자산관리 플랫폼',
+  title: 'Arch - AI 기반 자산관리 플랫폼',
   description: '인공지능이 분석하는 나만의 투자 포트폴리오. 개인 투자자를 위한 스마트한 자산관리 서비스.',
   generator: 'v0.app',
   keywords: ['투자', '포트폴리오', 'AI', '자산관리', '주식', 'ETF', '금융'],
@@ -43,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko" className="dark">
+    <html lang="ko" className="light">
       <body className="font-sans antialiased bg-background">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

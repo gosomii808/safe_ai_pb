@@ -21,13 +21,14 @@ import {
   Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { getLatestAiReport, getPortfolioAssets } from "@/lib/api";
+import { getLatestAiReport, getPortfolioAssets, getEventStudy, type EventStudyItem } from "@/lib/api";
 import type {
   AiReportResponse,
   AiReportCard,
   AiReportCardStatus,
   AiReportRisk,
 } from "@/lib/ai-report-types";
+
 
 // ── 매핑 ───────────────────────────────────────────────
 
@@ -97,6 +98,7 @@ export default function AiReportPage() {
   const [userIdResolved, setUserIdResolved] = useState(false);
   const [report, setReport] = useState<AiReportResponse | null>(null);
   const [rawAssets, setRawAssets] = useState<any[]>([]);
+  const [eventStudy, setEventStudy] = useState<EventStudyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,12 +118,14 @@ export default function AiReportPage() {
     setError(null);
     Promise.all([
       getLatestAiReport(userId),
-      getPortfolioAssets(userId).catch(() => [])
+      getPortfolioAssets(userId).catch(() => []),
+      getEventStudy(userId).catch(() => [])
     ])
-      .then(([reportRes, assetsRes]) => {
+      .then(([reportRes, assetsRes, studyRes]) => {
         if (!cancelled) {
           setReport(reportRes);
           setRawAssets(assetsRes);
+          setEventStudy(studyRes);
         }
       })
       .catch((e: Error) => {
@@ -134,6 +138,7 @@ export default function AiReportPage() {
       cancelled = true;
     };
   }, [userId, userIdResolved]);
+
 
   // ── 상태별 렌더 ──
 
@@ -308,7 +313,67 @@ export default function AiReportPage() {
         </section>
       )}
 
+      {/* 경제 이벤트 영향 분석 (Event Study) 카드 추가 */}
+      {eventStudy && eventStudy.length > 0 && (
+        <section className="mt-6 rounded-2xl border border-white/5 bg-[#161b22] p-6">
+          <div className="flex items-center gap-2 text-green-400">
+            <BarChart3 className="h-5 w-5" />
+            <h3 className="text-xl font-bold text-white">경제 이벤트 영향 분석 (Event Study)</h3>
+          </div>
+          <p className="mt-1 text-sm text-gray-400 leading-relaxed">
+            기준금리 결정 이벤트 전후[-3일, +7일]의 시장 지수 대비 포트폴리오의 실질 초과수익률(Abnormal Return) 흐름을 역사적 데이터로 분석합니다.
+          </p>
+
+          <div className="mt-5 space-y-4">
+            {eventStudy.map((study, idx) => (
+              <div key={idx} className="rounded-xl border border-white/5 bg-black/20 p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+                  <div>
+                    <h4 className="text-base font-bold text-white">{study.eventTitle}</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">이벤트 발생일: {study.eventDate}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-white/5 px-2 py-1 text-xs text-gray-300">
+                      유형: {study.decisionType === "cut" ? "인하" : study.decisionType === "hike" ? "인상" : "동결"} ({study.changeBp}bp)
+                    </span>
+                    <span className={`rounded px-2.5 py-1 text-xs font-bold ${
+                      study.cumulativeAbnormalReturn >= 0 
+                        ? "bg-green-500/20 text-green-400" 
+                        : "bg-red-500/20 text-red-400"
+                    }`}>
+                      누적 초과수익률: {study.cumulativeAbnormalReturn >= 0 ? "+" : ""}{study.cumulativeAbnormalReturn}%
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  <div className="bg-black/10 rounded-lg p-3 text-center border border-white/5">
+                    <span className="text-[10px] text-gray-400">포트폴리오 수익률</span>
+                    <p className="text-sm font-semibold text-white mt-1">{study.portfolioReturn}%</p>
+                  </div>
+                  <div className="bg-black/10 rounded-lg p-3 text-center border border-white/5">
+                    <span className="text-[10px] text-gray-400">시장 지수 수익률</span>
+                    <p className="text-sm font-semibold text-white mt-1">{study.marketReturn}%</p>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 bg-black/10 rounded-lg p-3 text-center border border-white/5 flex flex-col justify-center">
+                    <span className="text-[10px] text-gray-400">abnormalReturn</span>
+                    <p className={`text-sm font-bold mt-1 ${study.cumulativeAbnormalReturn >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {study.cumulativeAbnormalReturn >= 0 ? "+" : ""}{study.cumulativeAbnormalReturn}%
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-xs text-gray-300 bg-white/5 rounded-lg px-3 py-2 leading-relaxed">
+                  {study.summary}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* 분석 카드 2열 그리드 */}
+
       {cards.length > 0 && (
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {cards.map((card) => (

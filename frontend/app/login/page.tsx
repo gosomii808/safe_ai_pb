@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Eye, EyeOff, Lock, Mail, TrendingUp } from "lucide-react"
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { loginUser } from "@/lib/api"
 
@@ -48,7 +48,7 @@ export default function LoginPage() {
           </p>
         </div>
         <p className="text-sm text-muted-foreground">
-          © 2026 SafePB AI. All rights reserved.
+          © 2026 Arch. All rights reserved.
         </p>
       </div>
 
@@ -150,10 +150,12 @@ export default function LoginPage() {
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-        <TrendingUp className="h-5 w-5 text-primary-foreground" />
-      </div>
-      <span className="text-xl font-bold text-foreground">SafePB AI</span>
+      <img
+        src="/arch_logo.jpg"
+        alt="Arch"
+        className="h-10 w-10 rounded-xl object-cover"
+      />
+      <span className="text-xl font-bold text-foreground">Arch</span>
     </div>
   )
 }

@@ -306,7 +306,56 @@ export async function deletePortfolioAsset(
   return response.json()
 }
 
+export interface ChatbotResponse {
+  answer: string
+  mode: "openai" | "fallback"
+  usedContext: string[]
+}
+
+export async function sendChatbotMessage(
+  userId: string,
+  message: string
+): Promise<ChatbotResponse> {
+  const response = await fetch(`${API_BASE_URL}/chatbot/message`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ userId, message }),
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export interface EventStudyItem {
+  eventTitle: string
+  eventDate: string
+  decisionType: string
+  changeBp: number
+  portfolioReturn: number
+  marketReturn: number
+  cumulativeAbnormalReturn: number
+  summary: string
+}
+
+export async function getEventStudy(userId: string): Promise<EventStudyItem[]> {
+  const response = await fetch(`${API_BASE_URL}/events/${userId}/event-study`, {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
 async function readErrorMessage(response: Response): Promise<string> {
+
   try {
     const body = await response.json()
 
@@ -323,3 +372,4 @@ async function readErrorMessage(response: Response): Promise<string> {
 
   return "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
 }
+

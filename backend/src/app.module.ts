@@ -8,6 +8,7 @@ import { SecurityModule } from './security/security.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { AiReportModule } from './ai-report/ai-report.module';
 import { AuthModule } from './auth/auth.module';
+import { ChatbotModule } from './chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -18,8 +19,10 @@ import { AuthModule } from './auth/auth.module';
     PortfolioModule,
     AiReportModule,
     AuthModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
+

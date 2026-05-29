@@ -67,7 +67,7 @@ function SecurityScoreGauge({
 
   return (
     <div className="glass-card rounded-2xl p-6">
-      <h3 className="text-lg font-semibold text-foreground">SafePB 보안 점수</h3>
+      <h3 className="text-lg font-semibold text-foreground">Arch 보안 점수</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         접속 기록, 보안 이벤트, AI 요청 로그를 기준으로 산정합니다.
       </p>

@@ -29,7 +29,7 @@ export function AIChatModal({ isOpen, onClose }: AIChatModalProps) {
     {
       id: "1",
       role: "assistant",
-      content: "안녕하세요! SafePB AI 어시스턴트입니다. 투자와 관련된 질문이나 포트폴리오 분석을 도와드릴게요. 무엇을 도와드릴까요?",
+      content: "안녕하세요! Arch AI 어시스턴트입니다. 투자와 관련된 질문이나 포트폴리오 분석을 도와드릴게요. 무엇을 도와드릴까요?",
       timestamp: new Date(),
     },
   ])
@@ -114,7 +114,7 @@ export function AIChatModal({ isOpen, onClose }: AIChatModalProps) {
               <Bot className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold text-foreground">SafePB AI 어시스턴트</h2>
+              <h2 className="font-semibold text-foreground">Arch AI 어시스턴트</h2>
               <p className="text-xs text-muted-foreground">투자 상담 및 포트폴리오 분석</p>
             </div>
           </div>

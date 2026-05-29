@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ShieldCheck, TrendingUp } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
 import { InvestmentProfileStep } from "@/components/onboarding/InvestmentProfileStep"
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress"
 import { PersonalInfoStep } from "@/components/onboarding/PersonalInfoStep"
@@ -73,10 +73,12 @@ export default function OnboardingPage() {
     <div className="flex min-h-screen flex-col justify-between bg-background px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-2xl items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-            <TrendingUp className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold text-foreground">SafePB AI</span>
+          <img
+            src="/arch_logo.jpg"
+            alt="Arch"
+            className="h-9 w-9 rounded-xl object-cover"
+          />
+          <span className="text-lg font-bold text-foreground">Arch</span>
         </div>
         <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-primary" />
@@ -146,7 +148,7 @@ export default function OnboardingPage() {
 
       <footer className="mx-auto w-full max-w-2xl border-t border-border pt-4 text-center text-[10px] leading-relaxed text-muted-foreground">
         <p>
-          SafePB AI는 민감 정보를 암호화 저장하며, AI 리포트에는 원본 수량과
+          Arch는 민감 정보를 암호화 저장하며, AI 리포트에는 원본 수량과
           매수금액을 직접 노출하지 않습니다.
         </p>
       </footer>

@@ -35,10 +35,12 @@ export function Header() {
     <>
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-lg lg:px-6">
         <div className="flex items-center gap-4 lg:hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">S</span>
-          </div>
-          <span className="font-semibold text-foreground">SafePB AI</span>
+          <img
+            src="/arch_logo.jpg"
+            alt="Arch"
+            className="h-8 w-8 rounded-lg object-cover"
+          />
+          <span className="font-semibold text-foreground">Arch</span>
         </div>
 
         <div className="hidden flex-1 lg:block">

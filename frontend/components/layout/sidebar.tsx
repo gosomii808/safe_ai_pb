@@ -12,7 +12,6 @@ import {
   Settings,
   Bot,
   LogOut,
-  TrendingUp,
 } from "lucide-react"
 import { AIChatModal } from "@/components/ai/chat-modal"
 
@@ -30,11 +29,13 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-border bg-sidebar lg:flex">
       <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-          <TrendingUp className="h-5 w-5 text-primary-foreground" />
-        </div>
+        <img
+          src="/arch_logo.jpg"
+          alt="Arch"
+          className="h-9 w-9 rounded-xl object-cover"
+        />
         <div>
-          <h1 className="text-lg font-bold text-foreground">SafePB AI</h1>
+          <h1 className="text-lg font-bold text-foreground">Arch</h1>
           <p className="text-xs text-muted-foreground">AI 자산관리</p>
         </div>
       </div>

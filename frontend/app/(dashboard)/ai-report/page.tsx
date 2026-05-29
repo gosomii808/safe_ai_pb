@@ -212,6 +212,64 @@ export default function AiReportPage() {
         )}
       </section>
 
+      {/* 단기 흐름 분석 카드 */}
+      {report.trendAnalysis && (
+        <section className="mt-6 rounded-2xl border border-white/5 bg-[#161b22] p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-green-400">
+              <TrendingUp className="h-5 w-5" />
+              <h3 className="text-xl font-bold text-white">단기 흐름 분석</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                report.trendAnalysis.trendSignal === "positive" 
+                  ? "bg-green-500/20 text-green-400" 
+                  : report.trendAnalysis.trendSignal === "negative"
+                    ? "bg-red-500/20 text-red-400"
+                    : "bg-blue-500/20 text-blue-400"
+              }`}>
+                {report.trendAnalysis.trendSignal === "positive" ? "상승 우위" : report.trendAnalysis.trendSignal === "negative" ? "조정 우위" : "횡보/중립"}
+              </span>
+              <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                report.trendAnalysis.riskLevel === "high"
+                  ? "bg-red-500/20 text-red-400"
+                  : report.trendAnalysis.riskLevel === "medium"
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : "bg-green-500/20 text-green-400"
+              }`}>
+                리스크: {report.trendAnalysis.riskLevel === "high" ? "높음" : report.trendAnalysis.riskLevel === "medium" ? "보통" : "낮음"}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col md:flex-row gap-6 items-start">
+            <div className="flex flex-col items-center justify-center bg-black/25 rounded-2xl p-6 min-w-[120px]">
+              <span className="text-sm text-gray-400">단기 흐름 점수</span>
+              <span className="text-4xl font-extrabold text-green-400 mt-2">{report.trendAnalysis.trendScore}점</span>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm leading-relaxed text-gray-300">
+                {report.trendAnalysis.summary}
+              </p>
+              
+              {report.trendAnalysis.keyDrivers.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">핵심 단기 모멘텀 요인</p>
+                  <ul className="space-y-1.5">
+                    {report.trendAnalysis.keyDrivers.map((driver, index) => (
+                      <li key={index} className="flex items-center gap-2 text-xs text-gray-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500/60" />
+                        {driver}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 분석 카드 2열 그리드 */}
       {cards.length > 0 && (
         <div className="mt-6 grid gap-6 lg:grid-cols-2">

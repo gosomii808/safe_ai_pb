@@ -485,18 +485,37 @@ export class AiReportService {
     const out: RecencyDatum[] = [];
     for (const h of holdings) {
       if (h.assetClass !== 'EQUITY') continue;
-      const prices = await this.prisma.marketPrice.findMany({
-        where: { market: h.market, ticker: h.ticker },
-        orderBy: { priceDate: 'desc' },
-        take: 260, // 약 1년 영업일
-      });
+      
+      let prices: any[] = [];
+      const isDomestic = ['KRX', 'KOSPI', 'KOSDAQ'].includes(h.market?.toUpperCase());
+      
+      if (isDomestic) {
+        prices = await this.prisma.marketPrice.findMany({
+          where: { market: h.market, ticker: h.ticker },
+          orderBy: { priceDate: 'desc' },
+          take: 260, // 약 1년 영업일
+        });
+      } else {
+        prices = await this.prisma.$queryRaw<any[]>`
+          SELECT close as price, priceDate
+          FROM YahooPrice
+          WHERE UPPER(symbol) = ${h.ticker.toUpperCase()}
+          ORDER BY priceDate DESC
+          LIMIT 260
+        `.catch(() => []);
+      }
+
       if (prices.length < 21) continue; // 데이터 부족 → 단정 안 함
 
       const latest = prices[0].price;
+      const p5d = prices[Math.min(5, prices.length - 1)]?.price;
+      const p20d = prices[Math.min(20, prices.length - 1)]?.price;
       const p1m = prices[Math.min(20, prices.length - 1)]?.price;
       const p1y = prices[prices.length - 1]?.price;
       const ath = Math.max(...prices.map((p) => p.price));
 
+      const return5D = p5d ? ((latest - p5d) / p5d) * 100 : null;
+      const return20D = p20d ? ((latest - p20d) / p20d) * 100 : null;
       const return1M = p1m ? ((latest - p1m) / p1m) * 100 : null;
       const return1Y = p1y ? ((latest - p1y) / p1y) * 100 : null;
       const distanceFromATH = ath > 0 ? ((latest - ath) / ath) * 100 : null;
@@ -509,6 +528,8 @@ export class AiReportService {
         return1Y,
         rsi,
         distanceFromATH,
+        return5D,
+        return20D,
       });
     }
     return out;

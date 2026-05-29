@@ -4,6 +4,7 @@ import { useState } from "react"
 import { BadgeCent, LineChart, Plus, ShieldAlert, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { PortfolioAssetInput } from "@/lib/onboarding-types"
+import { getCurrencyByMarket } from "@/lib/currency"
 
 interface PortfolioInputStepProps {
   data: PortfolioAssetInput[]
@@ -143,9 +144,20 @@ export function PortfolioInputStep({
               className="glass-card relative flex flex-col gap-3 rounded-xl border border-border p-4"
             >
               <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                <span className="text-xs font-semibold text-primary">
-                  #{index + 1} 보유 종목
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-primary">
+                    #{index + 1} 보유 종목
+                  </span>
+                  {getCurrencyByMarket(asset.market) === "KRW" ? (
+                    <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-[10px] font-bold text-green-400">
+                      KRW (원화)
+                    </span>
+                  ) : (
+                    <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-bold text-blue-400">
+                      USD (달러)
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => handleRemoveAsset(index)}
@@ -217,11 +229,19 @@ export function PortfolioInputStep({
                     className="h-9 w-full rounded-lg border border-border bg-muted/30 px-3 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </Field>
-                <Field label="평균 매수가" error={errors[index]?.avgBuyPrice}>
+                <Field
+                  label={`평균 매수가 (${getCurrencyByMarket(asset.market)})`}
+                  error={errors[index]?.avgBuyPrice}
+                >
                   <input
                     type="number"
                     min="1"
                     value={asset.avgBuyPrice || ""}
+                    placeholder={
+                      getCurrencyByMarket(asset.market) === "KRW"
+                        ? "예: 75000"
+                        : "예: 145"
+                    }
                     onChange={(e) =>
                       handleFieldChange(
                         index,
@@ -231,6 +251,11 @@ export function PortfolioInputStep({
                     }
                     className="h-9 w-full rounded-lg border border-border bg-muted/30 px-3 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                    {getCurrencyByMarket(asset.market) === "KRW"
+                      ? "국내주식은 원화(KRW) 기준으로 입력해 주세요."
+                      : "해외주식/ETF는 달러(USD) 기준으로 입력해 주세요."}
+                  </p>
                 </Field>
                 <Field
                   label={

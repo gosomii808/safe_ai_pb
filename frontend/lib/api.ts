@@ -59,6 +59,61 @@ export interface PortfolioAnalysisResponse {
   disclaimer: string
 }
 
+export interface SecurityAccessLog {
+  id: string
+  action: string
+  endpoint: string
+  method: string
+  ipAddress: string | null
+  userAgent: string | null
+  success: boolean
+  createdAt: string
+}
+
+export interface SecurityEventLog {
+  id: string
+  eventType: string
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string
+  description: string
+  metadata: string | null
+  ipAddress: string | null
+  createdAt: string
+}
+
+export interface SecurityAiRequestLog {
+  id: string
+  requestType: string
+  modelName: string | null
+  tokenUsage: number | null
+  latencyMs: number | null
+  success: boolean
+  errorCode: string | null
+  createdAt: string
+}
+
+export interface SecurityStatusItem {
+  name: string
+  status: "encrypted" | "hashed" | "masked" | "missing" | "active" | string
+  healthy: boolean
+  description: string
+}
+
+export interface SecurityOverviewResponse {
+  userId: string
+  securityScore: number
+  recentAccessLogs: SecurityAccessLog[]
+  recentSecurityEvents: SecurityEventLog[]
+  recentAiRequestLogs: SecurityAiRequestLog[]
+  encryptionStatus: SecurityStatusItem[]
+  privacyStatus: {
+    maskingEnabled: boolean
+    rawSensitiveValuesExposed: boolean
+    localSessionOnly: boolean
+    message: string
+  }
+  summaryMessage: string
+}
+
 export async function submitOnboarding(
   payload: OnboardingPayload
 ): Promise<SubmitOnboardingResponse> {
@@ -121,6 +176,22 @@ export async function loginUser(
     },
     body: JSON.stringify({ email, password }),
   })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export async function getSecurityOverview(
+  userId: string
+): Promise<SecurityOverviewResponse> {
+  const params = new URLSearchParams({ userId })
+  const response = await fetch(
+    `${API_BASE_URL}/security/overview?${params.toString()}`,
+    { cache: "no-store" }
+  )
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))

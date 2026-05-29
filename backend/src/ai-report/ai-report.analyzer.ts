@@ -16,6 +16,7 @@ import {
   AiReportMacroAnalysis,
   AiReportProductRecommendation,
   AiReportResponse,
+  AiReportTrendAnalysis,
   AssetClass,
   BondType,
   AI_REPORT_DISCLAIMER,
@@ -60,6 +61,8 @@ export interface RecencyDatum {
   return1Y?: number | null; // %
   rsi?: number | null; // 0~100
   distanceFromATH?: number | null; // % (0에 가까울수록 역사적 고점)
+  return5D?: number | null;
+  return20D?: number | null;
 }
 
 export type MacroInput = AiReportMacroAnalysis;
@@ -765,6 +768,8 @@ export function analyzePortfolio(input: AnalyzerInput): AiReportResponse {
     buildDiversificationCard(c, correlation),
   ];
 
+  const trendAnalysis = computeTrendAnalysis(input);
+
   return {
     status: 'ready',
     generatedAt: new Date().toISOString(),
@@ -776,6 +781,7 @@ export function analyzePortfolio(input: AnalyzerInput): AiReportResponse {
     },
     cards,
     macroAnalysis: macro,
+    trendAnalysis,
     productRecommendations: buildProductRecommendations(c, profile, correlation),
     dataQuality,
     disclaimer: AI_REPORT_DISCLAIMER,
@@ -803,9 +809,112 @@ function insufficient(
       },
     },
     cards,
+    trendAnalysis: null,
     productRecommendations: [],
     dataQuality,
     disclaimer: AI_REPORT_DISCLAIMER,
+  };
+}
+
+function computeTrendAnalysis(input: AnalyzerInput): AiReportTrendAnalysis {
+  const { recency, macro } = input;
+
+  if (!recency || recency.length === 0) {
+    return {
+      trendScore: 50,
+      trendSignal: 'neutral',
+      riskLevel: 'medium',
+      keyDrivers: ['최근 추세 분석 데이터가 연동되지 않았습니다.'],
+      summary: '최근 데이터 기반 단기 흐름 분석 결과, 자산별 충분한 최근 시세 정보가 부족하여 중립 의견을 유지합니다.',
+    };
+  }
+
+  let totalScore = 50;
+  let positiveCount = 0;
+  let negativeCount = 0;
+  const keyDrivers: string[] = [];
+
+  let validHoldingsCount = 0;
+  let total5dReturn = 0;
+  let total20dReturn = 0;
+
+  for (const r of recency) {
+    const r5d = r.return5D ?? null;
+    const r20d = r.return20D ?? null;
+
+    if (r5d != null) {
+      validHoldingsCount++;
+      total5dReturn += r5d;
+      if (r5d > 0) {
+        totalScore += 2;
+        positiveCount++;
+      } else if (r5d < 0) {
+        totalScore -= 2;
+        negativeCount++;
+      }
+    }
+    if (r20d != null) {
+      total20dReturn += r20d;
+      if (r20d > 0) {
+        totalScore += 1;
+      } else if (r20d < 0) {
+        totalScore -= 1;
+      }
+    }
+  }
+
+  const avg5d = validHoldingsCount > 0 ? total5dReturn / validHoldingsCount : 0;
+  const avg20d = validHoldingsCount > 0 ? total20dReturn / validHoldingsCount : 0;
+
+  if (avg5d > 0) {
+    keyDrivers.push(`보유 종목 최근 5일 평균 수익률 강세 (${avg5d.toFixed(2)}%)`);
+  } else if (avg5d < 0) {
+    keyDrivers.push(`보유 종목 최근 5일 평균 수익률 약세 (${avg5d.toFixed(2)}%)`);
+  }
+
+  if (avg20d > 0) {
+    keyDrivers.push(`보유 종목 최근 20일 평균 수익률 상승세 (${avg20d.toFixed(2)}%)`);
+  }
+
+  let exchangeRisk = false;
+  if (macro?.usdKrw != null && macro.usdKrw > 1350) {
+    totalScore -= 3;
+    exchangeRisk = true;
+    keyDrivers.push(`원/달러 환율 고공행진 (${Math.round(macro.usdKrw)}원)으로 인한 원화 자산 리스크`);
+  }
+
+  let eventRisk = false;
+  const latestEvent = macro?.baseRateEvents?.[0];
+  if (latestEvent && latestEvent.surpriseBp != null && latestEvent.surpriseBp > 0) {
+    totalScore -= 3;
+    eventRisk = true;
+    keyDrivers.push(`최근 금리 이벤트 서프라이즈 발생 (${latestEvent.country}, +${latestEvent.surpriseBp}bp)`);
+  }
+
+  totalScore = Math.max(0, Math.min(100, totalScore));
+
+  let trendSignal: 'positive' | 'neutral' | 'negative' = 'neutral';
+  if (totalScore >= 60) trendSignal = 'positive';
+  else if (totalScore <= 40) trendSignal = 'negative';
+
+  let riskLevel: 'low' | 'medium' | 'high' = 'medium';
+  if (totalScore <= 40 || exchangeRisk || eventRisk) {
+    riskLevel = 'high';
+  } else if (totalScore >= 70 && !exchangeRisk) {
+    riskLevel = 'low';
+  }
+
+  const statusLabel =
+    trendSignal === 'positive' ? '상승 우위' : trendSignal === 'negative' ? '조정 우위' : '횡보/중립';
+
+  const summary = `최근 데이터 기반 단기 흐름 분석 결과, 포트폴리오의 최근 시세 변화율과 거시 환경 요소를 종합하여 **${statusLabel}** 시그널(단기 흐름 점수: ${totalScore}점)을 나타내고 있습니다. 단기 변동성 관리가 권장됩니다.`;
+
+  return {
+    trendScore: totalScore,
+    trendSignal,
+    riskLevel,
+    keyDrivers,
+    summary,
   };
 }
 

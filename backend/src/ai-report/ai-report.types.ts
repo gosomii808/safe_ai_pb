@@ -75,6 +75,14 @@ export interface AiReportMacroAnalysis {
   }>;
 }
 
+export interface AiReportTrendAnalysis {
+  trendScore: number;
+  trendSignal: 'positive' | 'neutral' | 'negative';
+  riskLevel: 'low' | 'medium' | 'high';
+  keyDrivers: string[];
+  summary: string;
+}
+
 export interface AiReportResponse {
   status: AiReportStatus;
   generatedAt: string | null;
@@ -91,6 +99,7 @@ export interface AiReportResponse {
   };
   cards: AiReportCard[];
   macroAnalysis?: AiReportMacroAnalysis | null;
+  trendAnalysis?: AiReportTrendAnalysis | null;
   productRecommendations: AiReportProductRecommendation[];
   dataQuality: {
     hasPortfolio: boolean;

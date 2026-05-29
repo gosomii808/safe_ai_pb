@@ -19,6 +19,10 @@ export class PersonalInfoDto {
 
   @IsString()
   @IsNotEmpty()
+  password: string;
+
+  @IsString()
+  @IsNotEmpty()
   phone: string;
 
   @IsString()

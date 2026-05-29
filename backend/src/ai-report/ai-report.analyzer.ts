@@ -13,6 +13,7 @@
 import {
   AiReportCard,
   AiReportGrade,
+  AiReportMacroAnalysis,
   AiReportProductRecommendation,
   AiReportResponse,
   AssetClass,
@@ -61,6 +62,8 @@ export interface RecencyDatum {
   distanceFromATH?: number | null; // % (0에 가까울수록 역사적 고점)
 }
 
+export type MacroInput = AiReportMacroAnalysis;
+
 export interface AnalyzerProfile {
   riskType: string | null;
   investmentGoal: string | null;
@@ -72,6 +75,7 @@ export interface AnalyzerInput {
   snapshot: AnalyzerSnapshot | null;
   correlation: CorrelationInput | null; // 없으면 단정 안 함
   recency: RecencyDatum[]; // 없으면 빈 배열
+  macro: MacroInput | null;
   dataQuality: {
     hasPortfolio: boolean;
     hasMarketPrices: boolean;
@@ -292,29 +296,90 @@ function buildRecencyAlerts(recency: RecencyDatum[]): string[] {
 // ── 거시 카드 (하드코딩 제거) ────────────────────────────
 // 신선한 거시 데이터를 매일 공급할 수 없으므로, 신선도 데이터가 없으면 단정하지 않는다.
 
-function buildMacroCard(hasMacroData: boolean): AiReportCard {
-  if (!hasMacroData) {
+function buildMacroCard(macro: MacroInput | null): AiReportCard {
+  if (!macro) {
     return {
       id: 'macro',
       title: '거시경제 영향 분석',
       status: 'neutral',
-      summary: '실시간 거시 데이터 미연동 구간입니다',
+      summary: '거시 데이터가 부족해 포트폴리오 구조 중심으로만 해석했습니다',
       details: [
-        '현재 최신 금리/환율 데이터가 실시간으로 연동되어 있지 않습니다',
-        '실시간 거시 분석은 데이터 파이프라인 연동 후 제공됩니다',
-        '아래 분석은 포트폴리오 구조(집중도·상관관계) 기준으로만 산출되었습니다',
+        '분석 기준일 이전의 금리, 환율, 지수 데이터를 충분히 찾지 못했습니다',
+        '경제 이벤트는 발생일 또는 발표일 이후에만 해석에 사용해야 합니다',
+        '아래 분석은 포트폴리오 구조와 최근 가격 데이터 중심으로 산출되었습니다',
       ],
       recommendation: '',
     };
   }
-  // 신선한 거시 데이터가 실제로 주입되는 경우에만 이 분기로 확장하세요.
+
+  const details: string[] = [];
+  let status: AiReportCard['status'] = 'neutral';
+
+  if (macro.krBaseRate != null) {
+    details.push(`한국 기준금리: ${macro.krBaseRate.toFixed(2)}%`);
+  }
+  if (macro.usBaseRate != null) {
+    details.push(`미국 기준금리: ${macro.usBaseRate.toFixed(2)}%`);
+  }
+  if (macro.usdKrw != null) {
+    details.push(
+      `USD/KRW 환율: ${Math.round(macro.usdKrw).toLocaleString('ko-KR')}원 수준`,
+    );
+  }
+
+  for (const index of macro.indices.slice(0, 4)) {
+    const changeText =
+      index.changeRate == null
+        ? '등락률 확인 불가'
+        : `${index.changeRate >= 0 ? '+' : ''}${index.changeRate.toFixed(2)}%`;
+    details.push(`${index.name}: ${changeText}`);
+    if ((index.changeRate ?? 0) <= -2) status = 'warning';
+  }
+
+  const latestEvent = macro.baseRateEvents[0];
+  if (latestEvent) {
+    const decision =
+      latestEvent.decisionType === 'cut'
+        ? '인하'
+        : latestEvent.decisionType === 'hike'
+          ? '인상'
+          : latestEvent.decisionType === 'hold'
+            ? '동결'
+            : '결정';
+    const bpText =
+      latestEvent.changeBp == null
+        ? ''
+        : `, 변화폭 ${latestEvent.changeBp.toFixed(0)}bp`;
+    const surpriseText =
+      latestEvent.surpriseBp == null
+        ? ''
+        : `, 예상 대비 ${latestEvent.surpriseBp.toFixed(0)}bp`;
+    details.push(
+      `최근 기준금리 이벤트(${latestEvent.country}, ${latestEvent.eventDate}): ${decision}${bpText}${surpriseText}`,
+    );
+    if (
+      latestEvent.decisionType === 'hike' ||
+      (latestEvent.surpriseBp ?? 0) > 0
+    ) {
+      status = 'warning';
+    }
+  }
+
+  details.push(
+    '금리와 환율 변화는 성장주, 채권형 자산, 해외자산 원화 평가에 영향을 줄 수 있습니다',
+  );
+
   return {
     id: 'macro',
     title: '거시경제 영향 분석',
-    status: 'neutral',
-    summary: '거시 환경 분석',
-    details: ['최신 거시 데이터를 기반으로 분석되었습니다'],
-    recommendation: '',
+    status,
+    summary:
+      status === 'warning'
+        ? '최근 거시 환경에 일부 리스크 요인이 관찰됩니다'
+        : '최근 금리, 환율, 지수 데이터를 반영해 거시 환경을 점검했습니다',
+    details,
+    recommendation:
+      '거시 데이터는 방향을 단정하기보다 포트폴리오 변동성 요인을 점검하는 보조 신호로 활용하세요.',
   };
 }
 
@@ -662,7 +727,7 @@ function buildProductRecommendations(
 // ── 메인 ─────────────────────────────────────────────────
 
 export function analyzePortfolio(input: AnalyzerInput): AiReportResponse {
-  const { holdings, snapshot, correlation, recency, profile, dataQuality } =
+  const { holdings, snapshot, correlation, recency, macro, profile, dataQuality } =
     input;
 
   if (!dataQuality.hasPortfolio || holdings.length === 0) {
@@ -695,7 +760,7 @@ export function analyzePortfolio(input: AnalyzerInput): AiReportResponse {
 
   const cards: AiReportCard[] = [
     buildRiskCard(c, recency),
-    buildMacroCard(dataQuality.hasMacroData),
+    buildMacroCard(macro),
     buildVolatilityCard(snapshot, c),
     buildDiversificationCard(c, correlation),
   ];
@@ -710,6 +775,7 @@ export function analyzePortfolio(input: AnalyzerInput): AiReportResponse {
       grades,
     },
     cards,
+    macroAnalysis: macro,
     productRecommendations: buildProductRecommendations(c, profile, correlation),
     dataQuality,
     disclaimer: AI_REPORT_DISCLAIMER,

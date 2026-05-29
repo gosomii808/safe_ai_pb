@@ -52,6 +52,8 @@ model User {
   id                String                      @id @default(cuid())
   nickname          String
   email             String // encrypted string
+  emailHash         String? // deterministic hash for login lookup
+  passwordHash      String?
   phone             String // encrypted string
   ageRange          String?
   occupation        String?
@@ -65,6 +67,7 @@ model User {
   securityEvents    SecurityEvent[]
 
   @@unique([email])
+  @@unique([emailHash])
   @@unique([phone])
 }
 

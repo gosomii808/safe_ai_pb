@@ -14,6 +14,7 @@ export class PrismaService implements OnModuleDestroy {
   constructor() {
     this.db = new DatabaseSync(this.resolveDatabasePath());
     this.db.exec('PRAGMA foreign_keys = ON');
+    this.ensureUserAuthColumns();
   }
 
   async onModuleInit() {
@@ -66,12 +67,15 @@ export class PrismaService implements OnModuleDestroy {
       const now = this.now();
       this.run(
         `INSERT INTO "User" (
-          id, nickname, email, phone, ageRange, occupation, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, nickname, email, emailHash, passwordHash, phone, ageRange,
+          occupation, createdAt, updatedAt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           data.nickname,
           data.email,
+          data.emailHash ?? null,
+          data.passwordHash ?? null,
           data.phone,
           data.ageRange ?? null,
           data.occupation ?? null,
@@ -467,6 +471,21 @@ export class PrismaService implements OnModuleDestroy {
       throw new Error(`SQLite database file was not found: ${resolved}`);
     }
     return resolved;
+  }
+
+  private ensureUserAuthColumns() {
+    const columns = this.all(`PRAGMA table_info("User")`).map((row) =>
+      String(row.name),
+    );
+    if (!columns.includes('emailHash')) {
+      this.db.exec(`ALTER TABLE "User" ADD COLUMN "emailHash" TEXT`);
+      this.db.exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS "User_emailHash_key" ON "User"("emailHash")`,
+      );
+    }
+    if (!columns.includes('passwordHash')) {
+      this.db.exec(`ALTER TABLE "User" ADD COLUMN "passwordHash" TEXT`);
+    }
   }
 
   private run(sql: string, params: SqlValue[] = []) {

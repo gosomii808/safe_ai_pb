@@ -54,6 +54,27 @@ export interface AiReportProductRecommendation {
   suitability: string;
 }
 
+export interface AiReportMacroAnalysis {
+  asOfDate: string;
+  krBaseRate: number | null;
+  usBaseRate: number | null;
+  usdKrw: number | null;
+  indices: Array<{
+    name: string;
+    value: number | null;
+    changeRate: number | null;
+    date: string | null;
+  }>;
+  baseRateEvents: Array<{
+    country: string;
+    eventDate: string;
+    decisionType: string | null;
+    changeBp: number | null;
+    surpriseBp: number | null;
+    title: string;
+  }>;
+}
+
 export interface AiReportResponse {
   status: AiReportStatus;
   generatedAt: string | null;
@@ -69,6 +90,7 @@ export interface AiReportResponse {
     };
   };
   cards: AiReportCard[];
+  macroAnalysis?: AiReportMacroAnalysis | null;
   productRecommendations: AiReportProductRecommendation[];
   dataQuality: {
     hasPortfolio: boolean;

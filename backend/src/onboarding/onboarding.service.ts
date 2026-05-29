@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../security/encryption.service';
 import { CreateOnboardingDto } from './dto/create-onboarding.dto';
@@ -18,6 +19,8 @@ export class OnboardingService {
         data: {
           nickname: dto.personalInfo.nickname,
           email: this.encryptRequired(dto.personalInfo.email),
+          emailHash: this.hashEmail(dto.personalInfo.email),
+          passwordHash: this.hashPassword(dto.personalInfo.password),
           phone: this.encryptRequired(dto.personalInfo.phone),
           ageRange: dto.personalInfo.ageRange,
           occupation: dto.personalInfo.occupation,
@@ -64,6 +67,7 @@ export class OnboardingService {
 
     return {
       userId: createdUser.id,
+      session: this.createLocalSession(createdUser.id),
       message: '온보딩 정보가 안전하게 저장되었습니다.',
       portfolioAssetCount: dto.portfolioAssets.length,
     };
@@ -75,5 +79,23 @@ export class OnboardingService {
 
   private encryptOptional(value: number | undefined): string | undefined {
     return this.encryptionService.encrypt(value) as string | undefined;
+  }
+
+  private hashEmail(email: string): string {
+    return createHash('sha256')
+      .update(email.trim().toLowerCase())
+      .digest('hex');
+  }
+
+  private hashPassword(password: string): string {
+    const salt = randomBytes(16);
+    const hash = pbkdf2Sync(password, salt, 120_000, 32, 'sha256');
+    return `pbkdf2_sha256:120000:${salt.toString('base64')}:${hash.toString(
+      'base64',
+    )}`;
+  }
+
+  private createLocalSession(userId: string): string {
+    return `local:${userId}:${Date.now()}`;
   }
 }

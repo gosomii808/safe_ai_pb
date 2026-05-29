@@ -7,6 +7,7 @@ import { EventsModule } from './events/events.module';
 import { SecurityModule } from './security/security.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { AiReportModule } from './ai-report/ai-report.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AiReportModule } from './ai-report/ai-report.module';
     EventsModule,
     PortfolioModule,
     AiReportModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

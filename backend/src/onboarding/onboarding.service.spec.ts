@@ -6,7 +6,7 @@ import { EncryptionService } from '../security/encryption.service';
 import { OnboardingService } from './onboarding.service';
 
 describe('OnboardingService', () => {
-  it('stores onboarding data with encrypted sensitive fields and access log', async () => {
+  it('stores onboarding data with encrypted sensitive fields, auth fields, and access log', async () => {
     const userCreate = jest.fn().mockResolvedValue({ id: 'user_123' });
     const accessLogCreate = jest.fn().mockResolvedValue({ id: 'log_123' });
     const transaction = jest.fn(async (callback) =>
@@ -27,6 +27,7 @@ describe('OnboardingService', () => {
       personalInfo: {
         nickname: 'safe-user',
         email: 'safe@example.com',
+        password: 'password123',
         phone: '010-1234-5678',
       },
       investmentProfile: {
@@ -50,15 +51,17 @@ describe('OnboardingService', () => {
       ],
     });
 
-    expect(result).toEqual({
-      userId: 'user_123',
-      message: '온보딩 정보가 안전하게 저장되었습니다.',
-      portfolioAssetCount: 2,
-    });
+    expect(result.userId).toBe('user_123');
+    expect(result.session).toMatch(/^local:user_123:/);
+    expect(result.message).toBe('온보딩 정보가 안전하게 저장되었습니다.');
+    expect(result.portfolioAssetCount).toBe(2);
+
     expect(userCreate).toHaveBeenCalledWith({
       data: {
         nickname: 'safe-user',
         email: 'encrypted:safe@example.com',
+        emailHash: expect.any(String),
+        passwordHash: expect.stringMatching(/^pbkdf2_sha256:120000:/),
         phone: 'encrypted:010-1234-5678',
         ageRange: undefined,
         occupation: undefined,

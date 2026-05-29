@@ -18,6 +18,7 @@ import {
   AnalyzerHolding,
   AnalyzerInput,
   CorrelationInput,
+  MacroInput,
   RecencyDatum,
 } from './ai-report.analyzer';
 import {
@@ -192,9 +193,9 @@ export class AiReportService {
     const hasRecencyData = recency.length > 0;
     if (!hasRecencyData) missing.push('최신성(추세) 데이터');
 
-    // 거시: 실시간 미연동 → 단정 금지
-    const hasMacroData = false;
-    missing.push('실시간 거시 데이터');
+    const macro = await this.loadMacroData();
+    const hasMacroData = !!macro;
+    if (!hasMacroData) missing.push('거시/시장 데이터');
 
     const input: AnalyzerInput = {
       profile: {
@@ -212,6 +213,7 @@ export class AiReportService {
         : null,
       correlation,
       recency,
+      macro,
       dataQuality: {
         hasPortfolio,
         hasMarketPrices,
@@ -290,6 +292,186 @@ export class AiReportService {
     } catch {
       return null; // summary가 JSON이 아니면 상관 데이터 없음으로 처리
     }
+  }
+
+  private async loadMacroData(): Promise<MacroInput | null> {
+    const analysisDate = new Date().toISOString().slice(0, 10);
+    const eventStartDate = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    try {
+      const [dailyRows, krRateRows, usRateRows, fxRows, indexRows, eventRows] =
+        await Promise.all([
+          this.prisma.$queryRaw<any[]>`
+            SELECT
+              date,
+              kospi_index as kospiIndex,
+              sp500_index as sp500Index,
+              nasdaq_index as nasdaqIndex,
+              usd_krw as usdKrw,
+              kr_base_rate as krBaseRate,
+              us_base_rate as usBaseRate
+            FROM daily_market_macro_prices
+            WHERE date <= ${analysisDate}
+            ORDER BY date DESC
+            LIMIT 21
+          `.catch(() => []),
+          this.prisma.$queryRaw<any[]>`
+            SELECT date, rateValue
+            FROM "InterestRate"
+            WHERE country = 'KR'
+              AND rateType = 'base_rate'
+              AND date <= ${analysisDate}
+            ORDER BY date DESC
+            LIMIT 1
+          `.catch(() => []),
+          this.prisma.$queryRaw<any[]>`
+            SELECT date, rateValue
+            FROM "InterestRate"
+            WHERE country = 'US'
+              AND rateType = 'base_rate'
+              AND date <= ${analysisDate}
+            ORDER BY date DESC
+            LIMIT 1
+          `.catch(() => []),
+          this.prisma.$queryRaw<any[]>`
+            SELECT date, exchangeRate
+            FROM "FxRate"
+            WHERE currencyPair = 'USD_KRW'
+              AND date <= ${analysisDate}
+            ORDER BY date DESC
+            LIMIT 1
+          `.catch(() => []),
+          this.prisma.$queryRaw<any[]>`
+            SELECT indexName, value, changeRate, indexDate
+            FROM "MarketIndex"
+            WHERE indexDate <= ${analysisDate}
+              AND (
+                UPPER(indexName) LIKE '%KOSPI%'
+                OR UPPER(indexName) LIKE '%KOSDAQ%'
+                OR UPPER(indexName) LIKE '%S&P%'
+                OR UPPER(indexName) LIKE '%NASDAQ%'
+              )
+            ORDER BY indexDate DESC
+            LIMIT 20
+          `.catch(() => []),
+          this.prisma.$queryRaw<any[]>`
+            SELECT country, eventDate, decisionType, changeBp, surpriseBp, title
+            FROM "EconomicEvent"
+            WHERE eventType = 'BASE_RATE_DECISION'
+              AND eventDate <= ${analysisDate}
+              AND eventDate >= ${eventStartDate}
+            ORDER BY eventDate DESC
+            LIMIT 5
+          `.catch(() => []),
+        ]);
+
+      const latestDaily = dailyRows[0] ?? null;
+      const previousDaily = dailyRows[Math.min(20, dailyRows.length - 1)] ?? null;
+
+      const macro: MacroInput = {
+        asOfDate: this.formatDate(latestDaily?.date ?? analysisDate),
+        krBaseRate:
+          this.readNumber(latestDaily?.krBaseRate) ??
+          this.readNumber(krRateRows[0]?.rateValue),
+        usBaseRate:
+          this.readNumber(latestDaily?.usBaseRate) ??
+          this.readNumber(usRateRows[0]?.rateValue),
+        usdKrw:
+          this.readNumber(latestDaily?.usdKrw) ??
+          this.readNumber(fxRows[0]?.exchangeRate),
+        indices: this.buildMacroIndices(latestDaily, previousDaily, indexRows),
+        baseRateEvents: eventRows.map((event) => ({
+          country: String(event.country ?? ''),
+          eventDate: this.formatDate(event.eventDate),
+          decisionType: event.decisionType ?? null,
+          changeBp: this.readNumber(event.changeBp),
+          surpriseBp: this.readNumber(event.surpriseBp),
+          title: String(event.title ?? '기준금리 결정'),
+        })),
+      };
+
+      const hasAnyMacroValue =
+        macro.krBaseRate != null ||
+        macro.usBaseRate != null ||
+        macro.usdKrw != null ||
+        macro.indices.length > 0 ||
+        macro.baseRateEvents.length > 0;
+
+      return hasAnyMacroValue ? macro : null;
+    } catch (error) {
+      this.logger.warn(`Macro data load failed: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  private buildMacroIndices(
+    latestDaily: any,
+    previousDaily: any,
+    indexRows: any[],
+  ): MacroInput['indices'] {
+    const fromDaily = [
+      this.macroIndexFromDaily('KOSPI', latestDaily, previousDaily, 'kospiIndex'),
+      this.macroIndexFromDaily('S&P500', latestDaily, previousDaily, 'sp500Index'),
+      this.macroIndexFromDaily('NASDAQ', latestDaily, previousDaily, 'nasdaqIndex'),
+    ].filter((row): row is MacroInput['indices'][number] => !!row);
+
+    if (fromDaily.length > 0) return fromDaily;
+
+    const picked = new Map<string, MacroInput['indices'][number]>();
+    for (const row of indexRows) {
+      const name = String(row.indexName ?? '').toUpperCase();
+      const key = name.includes('KOSDAQ')
+        ? 'KOSDAQ'
+        : name.includes('KOSPI')
+          ? 'KOSPI'
+          : name.includes('NASDAQ')
+            ? 'NASDAQ'
+            : name.includes('S&P')
+              ? 'S&P500'
+              : null;
+      if (!key || picked.has(key)) continue;
+      picked.set(key, {
+        name: key,
+        value: this.readNumber(row.value),
+        changeRate: this.readNumber(row.changeRate),
+        date: this.formatDate(row.indexDate),
+      });
+    }
+    return [...picked.values()];
+  }
+
+  private macroIndexFromDaily(
+    name: string,
+    latest: any,
+    previous: any,
+    field: string,
+  ): MacroInput['indices'][number] | null {
+    const latestValue = this.readNumber(latest?.[field]);
+    const previousValue = this.readNumber(previous?.[field]);
+    if (latestValue == null) return null;
+    return {
+      name,
+      value: latestValue,
+      changeRate:
+        previousValue && previousValue > 0
+          ? ((latestValue - previousValue) / previousValue) * 100
+          : null,
+      date: this.formatDate(latest?.date),
+    };
+  }
+
+  private readNumber(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private formatDate(value: unknown): string {
+    if (!value) return new Date().toISOString().slice(0, 10);
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    return String(value).slice(0, 10);
   }
 
   /**

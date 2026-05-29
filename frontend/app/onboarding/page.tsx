@@ -9,7 +9,7 @@ import { PersonalInfoStep } from "@/components/onboarding/PersonalInfoStep"
 import { PortfolioInputStep } from "@/components/onboarding/PortfolioInputStep"
 import { ReviewSubmitStep } from "@/components/onboarding/ReviewSubmitStep"
 import { submitOnboarding } from "@/lib/api"
-import {
+import type {
   InvestmentProfile,
   OnboardingPayload,
   PersonalInfo,
@@ -17,7 +17,7 @@ import {
 } from "@/lib/onboarding-types"
 
 const SUBMIT_ERROR_MESSAGE =
-  "Unable to save onboarding information. Please try again in a moment."
+  "회원가입 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요."
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -28,6 +28,7 @@ export default function OnboardingPage() {
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     nickname: "",
     email: "",
+    password: "",
     phone: "",
     ageRange: "",
     occupation: "",
@@ -42,25 +43,10 @@ export default function OnboardingPage() {
 
   const [portfolioAssets, setPortfolioAssets] = useState<PortfolioAssetInput[]>([])
 
-  const handleNextStep1 = (data: PersonalInfo) => {
-    setPersonalInfo(data)
-    setStep(2)
-  }
-
-  const handleNextStep2 = (data: InvestmentProfile) => {
-    setInvestmentProfile(data)
-    setStep(3)
-  }
-
-  const handleNextStep3 = (data: PortfolioAssetInput[]) => {
-    setPortfolioAssets(data)
-    setStep(4)
-  }
-
   const handleBack = () => {
     if (step > 1) {
       setSubmitError("")
-      setStep(step - 1)
+      setStep((current) => current - 1)
     }
   }
 
@@ -76,6 +62,7 @@ export default function OnboardingPage() {
     try {
       const result = await submitOnboarding(finalPayload)
       localStorage.setItem("safe_pb_user_id", result.userId)
+      localStorage.setItem("safe_pb_session", result.session)
       router.push("/portfolio")
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : SUBMIT_ERROR_MESSAGE)
@@ -83,53 +70,65 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-between py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-2xl flex items-center justify-between border-b border-border pb-4">
+    <div className="flex min-h-screen flex-col justify-between bg-background px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
             <TrendingUp className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-lg font-bold text-foreground">SafePB AI</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full border border-border">
+        <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-          Secure API connected
+          보안 저장 연결됨
         </div>
       </div>
 
-      <main className="flex-1 my-8 flex items-center justify-center">
-        <div className="w-full max-w-2xl glass-card rounded-2xl p-6 sm:p-8 space-y-8 border border-border/80 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+      <main className="my-8 flex flex-1 items-center justify-center">
+        <div className="glass-card relative w-full max-w-2xl space-y-8 overflow-hidden rounded-2xl border border-border/80 p-6 shadow-2xl sm:p-8">
+          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-primary/5 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-48 w-48 rounded-full bg-primary/5 blur-3xl" />
 
-          <div className="space-y-1 relative z-10">
+          <div className="relative z-10 space-y-1">
             <h2 className="text-xl font-bold text-foreground sm:text-2xl">
-              Portfolio Onboarding
+              포트폴리오 회원가입
             </h2>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Sensitive information is encrypted on the backend before storage.
+              입력한 개인정보와 포트폴리오 수치는 백엔드에서 암호화해 저장합니다.
             </p>
           </div>
 
-          <div className="py-2 relative z-10">
+          <div className="relative z-10 py-2">
             <OnboardingProgress currentStep={step} totalSteps={totalSteps} />
           </div>
 
-          <div className="pt-4 border-t border-border/50 relative z-10">
+          <div className="relative z-10 border-t border-border/50 pt-4">
             {step === 1 && (
-              <PersonalInfoStep data={personalInfo} onNext={handleNextStep1} />
+              <PersonalInfoStep
+                data={personalInfo}
+                onNext={(data) => {
+                  setPersonalInfo(data)
+                  setStep(2)
+                }}
+              />
             )}
             {step === 2 && (
               <InvestmentProfileStep
                 data={investmentProfile}
-                onNext={handleNextStep2}
+                onNext={(data) => {
+                  setInvestmentProfile(data)
+                  setStep(3)
+                }}
                 onBack={handleBack}
               />
             )}
             {step === 3 && (
               <PortfolioInputStep
                 data={portfolioAssets}
-                onNext={handleNextStep3}
+                onNext={(data) => {
+                  setPortfolioAssets(data)
+                  setStep(4)
+                }}
                 onBack={handleBack}
               />
             )}
@@ -145,10 +144,10 @@ export default function OnboardingPage() {
         </div>
       </main>
 
-      <footer className="text-center text-[10px] text-muted-foreground max-w-2xl mx-auto leading-relaxed border-t border-border pt-4 w-full">
+      <footer className="mx-auto w-full max-w-2xl border-t border-border pt-4 text-center text-[10px] leading-relaxed text-muted-foreground">
         <p>
-          SafePB AI stores sensitive values through backend encryption and keeps
-          raw portfolio numbers out of AI report inputs.
+          SafePB AI는 민감 정보를 암호화 저장하며, AI 리포트에는 원본 수량과
+          매수금액을 직접 노출하지 않습니다.
         </p>
       </footer>
     </div>

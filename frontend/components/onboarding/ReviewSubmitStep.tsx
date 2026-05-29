@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { OnboardingPayload } from "@/lib/onboarding-types"
 import {
   CheckCircle2,
   ChevronRight,
@@ -11,6 +9,8 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import type { OnboardingPayload } from "@/lib/onboarding-types"
 
 interface ReviewSubmitStepProps {
   payload: OnboardingPayload
@@ -27,15 +27,13 @@ export function ReviewSubmitStep({
 }: ReviewSubmitStepProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const maskEmail = (email: string): string => {
-    if (!email) return ""
+  const maskEmail = (email: string) => {
     const [local, domain] = email.split("@")
     if (!domain) return "***"
     return `${local.slice(0, 2)}***@${domain}`
   }
 
-  const maskPhone = (phone: string): string => {
-    if (!phone) return ""
+  const maskPhone = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, "")
     if (cleanPhone.length < 7) return "***"
     return `${cleanPhone.slice(0, 3)}-****-${cleanPhone.slice(-4)}`
@@ -52,128 +50,108 @@ export function ReviewSubmitStep({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex gap-3">
-        <ShieldCheck className="h-5 w-5 shrink-0 text-primary mt-0.5" />
-        <div className="text-xs text-muted-foreground leading-relaxed">
-          <p className="font-semibold text-primary mb-1">
-            Secure storage and anonymized AI input
+      <div className="flex gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <div className="text-xs leading-relaxed text-muted-foreground">
+          <p className="mb-1 font-semibold text-primary">
+            안전한 저장과 익명화된 AI 분석
           </p>
           <p>
-            Contact details and portfolio numbers are sent to the backend for
-            encrypted storage. AI reports should use anonymized portfolio
-            summaries instead of raw quantity, price, or amount values.
+            연락처와 포트폴리오 수치는 백엔드로 전송되어 암호화 저장됩니다.
+            AI 리포트에는 원본 수량, 매수가, 투자금액을 그대로 노출하지 않고
+            요약 지표만 사용합니다.
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-foreground">Review summary</h3>
+        <h3 className="text-sm font-bold text-foreground">입력 정보 확인</h3>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="glass-card p-4 rounded-xl border border-border space-y-3">
-            <h4 className="text-xs font-semibold text-primary flex items-center gap-1">
+          <section className="glass-card space-y-3 rounded-xl border border-border p-4">
+            <h4 className="flex items-center gap-1 text-xs font-semibold text-primary">
               <User className="h-3.5 w-3.5" />
-              Personal info
+              회원 정보
             </h4>
-            <div className="text-xs space-y-1.5 text-muted-foreground">
-              <div className="flex justify-between gap-4">
-                <span>Nickname</span>
-                <span className="text-foreground font-medium">
-                  {payload.personalInfo.nickname}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Email</span>
-                <span className="text-foreground font-medium">
-                  {maskEmail(payload.personalInfo.email)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Phone</span>
-                <span className="text-foreground font-medium">
-                  {maskPhone(payload.personalInfo.phone)}
-                </span>
-              </div>
+            <div className="space-y-1.5 text-xs text-muted-foreground">
+              <InfoRow label="닉네임" value={payload.personalInfo.nickname} />
+              <InfoRow label="이메일" value={maskEmail(payload.personalInfo.email)} />
+              <InfoRow label="전화번호" value={maskPhone(payload.personalInfo.phone)} />
+              <InfoRow label="비밀번호" value="저장 시 해시 처리" />
             </div>
-          </div>
+          </section>
 
-          <div className="glass-card p-4 rounded-xl border border-border space-y-3">
-            <h4 className="text-xs font-semibold text-primary flex items-center gap-1">
+          <section className="glass-card space-y-3 rounded-xl border border-border p-4">
+            <h4 className="flex items-center gap-1 text-xs font-semibold text-primary">
               <Landmark className="h-3.5 w-3.5" />
-              Investment profile
+              투자 프로필
             </h4>
-            <div className="text-xs space-y-1.5 text-muted-foreground">
-              <div className="flex justify-between gap-4">
-                <span>Risk type</span>
-                <span className="text-foreground font-medium">
-                  {payload.investmentProfile.riskType}
-                </span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span>Goal</span>
-                <span className="text-foreground font-medium">
-                  {payload.investmentProfile.investmentGoal}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1 pt-1 justify-end">
+            <div className="space-y-1.5 text-xs text-muted-foreground">
+              <InfoRow label="투자 성향" value={payload.investmentProfile.riskType} />
+              <InfoRow label="투자 목표" value={payload.investmentProfile.investmentGoal} />
+              <InfoRow
+                label="투자 경험"
+                value={payload.investmentProfile.investmentExperience}
+              />
+              <div className="flex flex-wrap justify-end gap-1 pt-1">
                 {payload.investmentProfile.preferredAssets.map((asset) => (
                   <span
                     key={asset}
-                    className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
+                    className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
                   >
                     {asset}
                   </span>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className="glass-card p-4 rounded-xl border border-border space-y-3">
-          <h4 className="text-xs font-semibold text-primary flex items-center gap-1.5">
+        <section className="glass-card space-y-3 rounded-xl border border-border p-4">
+          <h4 className="flex items-center gap-1.5 text-xs font-semibold text-primary">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            Portfolio assets ({payload.portfolioAssets.length})
+            보유 자산 ({payload.portfolioAssets.length}개)
           </h4>
 
           <div className="divide-y divide-border/50 text-xs">
             {payload.portfolioAssets.map((asset, index) => (
               <div
                 key={`${asset.market}-${asset.ticker}-${index}`}
-                className="py-2.5 flex items-center justify-between text-muted-foreground first:pt-0 last:pb-0"
+                className="flex items-center justify-between py-2.5 text-muted-foreground first:pt-0 last:pb-0"
               >
                 <div>
                   <p className="font-semibold text-foreground">
                     {asset.stockName || asset.ticker}
-                    <span className="text-[10px] text-muted-foreground font-normal">
+                    <span className="text-[10px] font-normal text-muted-foreground">
                       {" "}
                       ({asset.ticker})
                     </span>
                   </p>
                   <p className="text-[10px] text-muted-foreground">
-                    {asset.market} / {asset.sector || "Unclassified"}
+                    {asset.market} / {asset.sector || "미분류"}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-foreground font-medium">
-                    Target {asset.targetRatio}%
+                  <p className="font-medium text-foreground">
+                    목표 비중 {asset.targetRatio}%
                   </p>
-                  <p className="text-[10px] text-primary flex items-center gap-0.5 justify-end">
+                  <p className="flex items-center justify-end gap-0.5 text-[10px] text-primary">
                     <Lock className="h-2.5 w-2.5" />
-                    Quantity and amount hidden
+                    수량과 금액은 숨김
                   </p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-border/50 pt-3 flex justify-between items-center text-xs font-semibold text-foreground">
-            <span>Total investment amount</span>
-            <span className="text-primary flex items-center gap-1">
+          <div className="flex items-center justify-between border-t border-border/50 pt-3 text-xs font-semibold text-foreground">
+            <span>총 투자금액</span>
+            <span className="flex items-center gap-1 text-primary">
               <Lock className="h-3 w-3" />
-              Hidden
+              숨김
             </span>
           </div>
-        </div>
+        </section>
       </div>
 
       {errorMessage && (
@@ -182,35 +160,44 @@ export function ReviewSubmitStep({
         </div>
       )}
 
-      <div className="pt-4 flex justify-between">
+      <div className="flex justify-between pt-4">
         <Button
           type="button"
           variant="outline"
           onClick={onBack}
           disabled={isSubmitting}
-          className="h-11 px-8 rounded-xl border-border hover:bg-muted text-foreground"
+          className="h-11 rounded-xl border-border px-8 text-foreground hover:bg-muted"
         >
-          Back
+          이전 단계
         </Button>
         <Button
           type="button"
           onClick={handleStartAnalysis}
           disabled={isSubmitting}
-          className="h-11 px-8 rounded-xl font-medium flex items-center gap-2"
+          className="flex h-11 items-center gap-2 rounded-xl px-8 font-medium"
         >
           {isSubmitting ? (
             <>
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Saving securely...
+              안전하게 저장 중...
             </>
           ) : (
             <>
-              Start analysis
+              분석 시작하기
               <ChevronRight className="h-4 w-4" />
             </>
           )}
         </Button>
       </div>
+    </div>
+  )
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span>{label}</span>
+      <span className="text-right font-medium text-foreground">{value || "-"}</span>
     </div>
   )
 }

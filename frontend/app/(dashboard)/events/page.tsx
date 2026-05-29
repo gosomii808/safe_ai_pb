@@ -102,6 +102,19 @@ export default function EventsPage() {
   const [error, setError] = useState<string | null>(null)
   const [startDate, setStartDate] = useState("")
   const [category, setCategory] = useState("")
+  const [showAllEvents, setShowAllEvents] = useState(false)
+
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      const dateA = new Date(a.eventDate).getTime()
+      const dateB = new Date(b.eventDate).getTime()
+      return dateB - dateA
+    })
+  }, [events])
+
+  const visibleEvents = useMemo(() => {
+    return showAllEvents ? sortedEvents : sortedEvents.slice(0, 5)
+  }, [showAllEvents, sortedEvents])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -192,69 +205,7 @@ export default function EventsPage() {
         </div>
       )}
 
-      {loading && (
-        <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">
-          데이터를 불러오는 중입니다.
-        </div>
-      )}
-      {empty && (
-        <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">
-          조건에 맞는 이벤트가 없습니다.
-        </div>
-      )}
-
-      <div className="grid gap-4">
-        {events.map((event) => (
-          <div key={event.id} className="glass-card rounded-2xl p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 shrink-0 text-primary" />
-                  <h3 className="truncate font-semibold">{event.title}</h3>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {new Date(event.eventDate).toLocaleDateString("ko-KR")} ·{" "}
-                  {event.category} · {event.country}
-                </p>
-              </div>
-              <Badge>{event.importance}</Badge>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              {event.description}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {event.affectedAssets.map((asset) => (
-                <Badge key={asset} variant="secondary">
-                  {asset}
-                </Badge>
-              ))}
-            </div>
-            {event.marketReaction && (
-              <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-muted-foreground">KOSPI D+1</p>
-                  <p className="mt-1 font-mono font-semibold">
-                    {formatPercent(event.marketReaction.kospiReturnD1Pct)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-muted-foreground">KOSPI D+5</p>
-                  <p className="mt-1 font-mono font-semibold">
-                    {formatPercent(event.marketReaction.kospiReturnD5Pct)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-muted-foreground">USD/KRW D+1</p>
-                  <p className="mt-1 font-mono font-semibold">
-                    {formatPercent(event.marketReaction.usdKrwReturnD1Pct)}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
+      {/* 시장·매크로 추이 & 섹터 민감도 (위로 이동) */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
         <div className="glass-card rounded-2xl p-5">
           <div className="flex items-center gap-2">
@@ -373,6 +324,7 @@ export default function EventsPage() {
         </div>
       </div>
 
+      {/* 이벤트 영향 요약 (위로 이동) */}
       <div className="glass-card rounded-2xl p-5">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
@@ -384,8 +336,8 @@ export default function EventsPage() {
               요약 데이터가 없습니다.
             </p>
           )}
-          {summaries.map((item) => (
-            <div key={item.eventTitle} className="rounded-xl border border-border p-3">
+          {summaries.map((item, index) => (
+            <div key={`${item.eventTitle}-${index}`} className="rounded-xl border border-border p-3">
               <p className="font-medium">{item.eventTitle}</p>
               <p className="mt-1 text-sm text-muted-foreground">{item.summary}</p>
               <p className="mt-2 text-xs text-muted-foreground">
@@ -398,6 +350,92 @@ export default function EventsPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* 경제 이벤트 목록 (아래로 이동) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-foreground">경제 이벤트 목록</h2>
+          <span className="text-xs text-muted-foreground">
+            {showAllEvents ? `전체 ${sortedEvents.length}개 표시 중` : "최근 5개 표시 중"}
+          </span>
+        </div>
+
+        {loading && (
+          <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">
+            데이터를 불러오는 중입니다.
+          </div>
+        )}
+        {empty && (
+          <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">
+            조건에 맞는 이벤트가 없습니다.
+          </div>
+        )}
+
+        <div className="grid gap-4">
+          {visibleEvents.map((event, index) => (
+            <div key={event.id || `${event.eventDate}-${event.country}-${event.category}-${index}`} className="glass-card rounded-2xl p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 shrink-0 text-primary" />
+                    <h3 className="truncate font-semibold">{event.title}</h3>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {new Date(event.eventDate).toLocaleDateString("ko-KR")} ·{" "}
+                    {event.category} · {event.country}
+                  </p>
+                </div>
+                <Badge>{event.importance}</Badge>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {event.description}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {event.affectedAssets.map((asset) => (
+                  <Badge key={asset} variant="secondary">
+                    {asset}
+                  </Badge>
+                ))}
+              </div>
+              {event.marketReaction && (
+                <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-muted-foreground">KOSPI D+1</p>
+                    <p className="mt-1 font-mono font-semibold">
+                      {formatPercent(event.marketReaction.kospiReturnD1Pct)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-muted-foreground">KOSPI D+5</p>
+                    <p className="mt-1 font-mono font-semibold">
+                      {formatPercent(event.marketReaction.kospiReturnD5Pct)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-muted-foreground">USD/KRW D+1</p>
+                    <p className="mt-1 font-mono font-semibold">
+                      {formatPercent(event.marketReaction.usdKrwReturnD1Pct)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 접기/펼치기 토글 버튼 */}
+        {sortedEvents.length > 5 && (
+          <div className="flex justify-center mt-4">
+            <button
+              type="button"
+              onClick={() => setShowAllEvents(!showAllEvents)}
+              className="px-6 py-2.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground transition-all hover:scale-105 active:scale-95 shadow-md shadow-primary/20"
+            >
+              {showAllEvents ? "최근 5개만 보기" : `경제 이벤트 더보기 (${sortedEvents.length - 5}개 더 있음)`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

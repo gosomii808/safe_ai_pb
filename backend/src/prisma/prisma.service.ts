@@ -505,10 +505,30 @@ export class PrismaService implements OnModuleDestroy {
   }
 
   private getMarketReaction(economicEventId: string) {
-    return this.get(
+    const row = this.get(
       `SELECT * FROM event_market_reactions WHERE economic_event_id = ? LIMIT 1`,
       [economicEventId],
     );
+    if (!row) return null;
+    return {
+      id: row.id,
+      economicEventId: row.economic_event_id,
+      kospiTMinus5: row.kospi_t_minus_5,
+      kospiTMinus4: row.kospi_t_minus_4,
+      kospiTMinus3: row.kospi_t_minus_3,
+      kospiTMinus2: row.kospi_t_minus_2,
+      kospiTMinus1: row.kospi_t_minus_1,
+      kospiT0: row.kospi_t_0,
+      kospiTPlus1: row.kospi_t_plus_1,
+      kospiTPlus2: row.kospi_t_plus_2,
+      kospiTPlus3: row.kospi_t_plus_3,
+      kospiTPlus4: row.kospi_t_plus_4,
+      kospiTPlus5: row.kospi_t_plus_5,
+      kospiReturnD1Pct: row.kospi_return_d1_pct,
+      kospiReturnD5Pct: row.kospi_return_d5_pct,
+      usdKrwReturnD1Pct: row.usd_krw_return_d1_pct,
+      updatedAt: row.updated_at,
+    };
   }
 
   private toSqlValue(value: SqlValue): string | number | null {

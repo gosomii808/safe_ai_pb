@@ -83,7 +83,7 @@ function formatDate(value: string) {
 }
 
 function formatPercent(value: number | null | undefined) {
-  if (value === null || value === undefined) return "-"
+  if (value === null || value === undefined) return "집계 대기"
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}%`
 }
 
@@ -191,138 +191,81 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* 시장·매크로 추이 & 섹터 민감도 (위로 이동) */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
-        <div className="glass-card rounded-2xl p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              <h2 className="font-semibold">시장·매크로 추이</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-                className="h-8 max-w-[160px] text-xs"
-              />
-              <button
-                type="button"
-                onClick={() => setFetchTrigger((n) => n + 1)}
-                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                보기
-              </button>
-            </div>
+      {/* 시장·매크로 추이 */}
+      <div className="glass-card rounded-2xl p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">시장·매크로 추이</h2>
           </div>
-          <div className="mt-4 h-72">
-            {macroSeries.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={macroSeries}
-                  margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={formatDate}
-                    minTickGap={24}
-                    tickLine={false}
-                  />
-                  <YAxis tickLine={false} width={52} />
-                  <Tooltip
-                    labelFormatter={(value) => formatDate(String(value))}
-                    formatter={(value, name) => [
-                      typeof value === "number" ? value.toLocaleString() : "-",
-                      name,
-                    ]}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="kospiIndex"
-                    name="KOSPI"
-                    stroke="#2563eb"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="sp500Index"
-                    name="S&P 500"
-                    stroke="#16a34a"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="usdKrw"
-                    name="USD/KRW"
-                    stroke="#f97316"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                ETL 실행 후 매크로 시계열이 표시됩니다.
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="h-8 max-w-[160px] text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => setFetchTrigger((n) => n + 1)}
+              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              보기
+            </button>
           </div>
         </div>
-
-        <div className="glass-card rounded-2xl p-5">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">섹터 민감도</h2>
-          </div>
-          {sensitivity.length > 0 ? (
-            <div className="mt-4 overflow-x-auto">
-              <div
-                className="grid min-w-[420px] gap-2 text-xs"
-                style={{
-                  gridTemplateColumns: `96px repeat(${eventColumns.length}, minmax(64px, 1fr))`,
-                }}
+        <div className="mt-4 h-72">
+          {macroSeries.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={macroSeries}
+                margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
               >
-                <div />
-                {eventColumns.map((column) => (
-                  <div key={column} className="font-medium text-muted-foreground">
-                    {column}
-                  </div>
-                ))}
-                {sectors.map((sector) => (
-                  <Fragment key={sector}>
-                    <div key={`${sector}-label`} className="py-2 font-medium">
-                      {sector}
-                    </div>
-                    {eventColumns.map((column) => {
-                      const cell = sensitivityByCell.get(`${sector}:${column}`)
-                      return (
-                        <div
-                          key={`${sector}-${column}`}
-                          className={`rounded-md px-2 py-2 text-center font-mono ${sensitivityTone(
-                            cell?.score ?? 1,
-                          )}`}
-                          title={
-                            cell
-                              ? `${cell.eventCount}개 이벤트, 평균 ${formatPercent(cell.avgAbsPct)}`
-                              : "데이터 없음"
-                          }
-                        >
-                          {cell?.avgAbsPct == null
-                            ? "-"
-                            : cell.avgAbsPct.toFixed(2)}
-                        </div>
-                      )
-                    })}
-                  </Fragment>
-                ))}
-              </div>
-            </div>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatDate}
+                  minTickGap={24}
+                  tickLine={false}
+                />
+                <YAxis tickLine={false} width={52} />
+                <Tooltip
+                  labelFormatter={(value) => formatDate(String(value))}
+                  formatter={(value, name) => [
+                    typeof value === "number" ? value.toLocaleString() : "-",
+                    name,
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="kospiIndex"
+                  name="KOSPI"
+                  stroke="#2563eb"
+                  dot={false}
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="sp500Index"
+                  name="S&P 500"
+                  stroke="#16a34a"
+                  dot={false}
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="usdKrw"
+                  name="USD/KRW"
+                  stroke="#f97316"
+                  dot={false}
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
-            <p className="mt-4 text-sm text-muted-foreground">
-              ETL 실행 후 섹터별 민감도가 표시됩니다.
-            </p>
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              ETL 실행 후 매크로 시계열이 표시됩니다.
+            </div>
           )}
         </div>
       </div>

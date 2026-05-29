@@ -36,15 +36,17 @@ export default function LoginPage() {
     <div className="flex min-h-screen">
       <div className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-primary/20 via-background to-background p-12 lg:flex">
         <Brand />
-        <div className="space-y-6">
-          <h1 className="text-4xl font-bold leading-tight text-foreground">
+        <div className="space-y-6 pl-8">
+          <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-foreground xl:text-6xl">
             AI가 분석하는
             <br />
-            <span className="text-primary">나만의 투자 포트폴리오</span>
+            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              나만의 투자 포트폴리오
+            </span>
           </h1>
-          <p className="max-w-md text-lg text-muted-foreground">
-            저장된 포트폴리오와 시장 데이터를 기반으로 투자 현황과 리스크를
-            설명합니다.
+          <p className="max-w-lg text-xl leading-relaxed text-muted-foreground break-keep">
+            저장된 포트폴리오와 실시간 시장 데이터를 기반으로 투자 현황과 리스크를
+            정밀하게 진단하고 개인 맞춤형 분석 리포트를 제공합니다.
           </p>
         </div>
         <p className="text-sm text-muted-foreground">

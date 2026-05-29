@@ -247,21 +247,26 @@ export class PortfolioService {
       const closePrice = isDomestic
         ? (price as LatestDomesticPrice).price
         : (price as LatestOverseasPrice).close;
-      const fxMultiplier = isDomestic ? 1 : (fxRate?.exchangeRate ?? null);
 
-      if (!fxMultiplier) {
-        missingData.push(`${asset.ticker}: USD_KRW fx rate`);
-        continue;
+      let fxMultiplier = 1;
+      if (!isDomestic) {
+        if (fxRate && fxRate.exchangeRate) {
+          fxMultiplier = fxRate.exchangeRate;
+        } else {
+          fxMultiplier = 1340;
+          console.warn(`[Warning] USD/KRW exchange rate not found, using fallback 1340 for ${asset.ticker}`);
+        }
       }
 
-      const investedAmount =
+      const investedAmountRaw =
         investmentAmount ?? (avgBuyPrice ? quantity * avgBuyPrice : null);
 
-      if (!investedAmount || investedAmount <= 0) {
+      if (!investedAmountRaw || investedAmountRaw <= 0) {
         missingData.push(`${asset.ticker}: invested amount`);
         continue;
       }
 
+      const investedAmount = isDomestic ? investedAmountRaw : investedAmountRaw * fxMultiplier;
       const valuationAmount = quantity * closePrice * fxMultiplier;
       const profitLoss = valuationAmount - investedAmount;
       const returnRate = (profitLoss / investedAmount) * 100;

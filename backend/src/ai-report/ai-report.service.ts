@@ -101,6 +101,23 @@ export class AiReportService {
     let hasMarketPrices = false;
     const holdings: AnalyzerHolding[] = [];
 
+    const fxRows = await this.prisma.$queryRaw<any[]>`
+      SELECT exchangeRate
+      FROM FxRate
+      WHERE currencyPair = 'USD_KRW'
+      ORDER BY date DESC
+      LIMIT 1
+    `.catch(() => []);
+    
+    let fxRate = 1340;
+    if (fxRows && fxRows[0] && fxRows[0].exchangeRate) {
+      fxRate = Number(fxRows[0].exchangeRate);
+    } else {
+      console.warn(`[Warning] USD/KRW exchange rate not found in AI Report, using fallback 1340`);
+    }
+
+    const DOMESTIC_MARKETS = new Set(['KRX', 'KOSPI', 'KOSDAQ', 'KONEX']);
+
     for (const a of assets) {
       let quantity: number | null = null;
       let investmentAmount: number | null = null;
@@ -123,25 +140,49 @@ export class AiReportService {
         /* 무시 */
       }
 
-      const latestPrice = await this.prisma.marketPrice.findFirst({
-        where: { market: a.market, ticker: a.ticker },
-        orderBy: { priceDate: 'desc' },
-      });
+      const isDomestic = DOMESTIC_MARKETS.has(a.market.toUpperCase());
+      let closePrice: number | null = null;
+      let priceFound = false;
+
+      if (isDomestic) {
+        const latestPrice = await this.prisma.marketPrice.findFirst({
+          where: { market: a.market, ticker: a.ticker },
+          orderBy: { priceDate: 'desc' },
+        });
+        if (latestPrice) {
+          closePrice = latestPrice.price;
+          priceFound = true;
+          hasMarketPrices = true;
+        }
+      } else {
+        const overseasPrices = await this.prisma.$queryRaw<any[]>`
+          SELECT symbol, close, priceDate
+          FROM YahooPrice
+          WHERE UPPER(symbol) = ${a.ticker.toUpperCase()}
+          ORDER BY priceDate DESC
+          LIMIT 1
+        `.catch(() => []);
+        if (overseasPrices && overseasPrices[0]) {
+          closePrice = Number(overseasPrices[0].close);
+          priceFound = true;
+          hasMarketPrices = true;
+        }
+      }
+
       const valuation = await this.prisma.valuationIndicator.findFirst({
         where: { market: a.market, ticker: a.ticker },
         orderBy: { indicatorDate: 'desc' },
       });
 
       let marketValue: number | null = null;
-      let priceFound = false;
-      if (quantity != null && latestPrice) {
-        marketValue = quantity * latestPrice.price;
-        priceFound = true;
-        hasMarketPrices = true;
+      const fxMultiplier = isDomestic ? 1 : fxRate;
+
+      if (quantity != null && closePrice != null) {
+        marketValue = quantity * closePrice * fxMultiplier;
       } else if (investmentAmount != null) {
-        marketValue = investmentAmount;
+        marketValue = investmentAmount * fxMultiplier;
       } else if (quantity != null && avgBuyPrice != null) {
-        marketValue = quantity * avgBuyPrice;
+        marketValue = quantity * avgBuyPrice * fxMultiplier;
       } else {
         missing.push(`${a.stockName ?? a.ticker} 평가액 산출 불가`);
       }

@@ -142,10 +142,13 @@ export function SectorConcentration({
                 <Tooltip
                   formatter={(value) => [`${Number(value).toFixed(1)}%`, "비중"]}
                   contentStyle={{
-                    backgroundColor: "#1f2937",
-                    border: "1px solid #374151",
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    border: "1px solid #e5e7eb",
                     borderRadius: "12px",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
                   }}
+                  itemStyle={{ color: "#111827" }}
+                  labelStyle={{ color: "#4b5563" }}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                   {chartData.map((entry) => (
@@ -221,11 +224,13 @@ export function PerformanceChart({
             <Tooltip
               formatter={(value) => [`${Number(value).toFixed(2)}`, "지수화"]}
               contentStyle={{
-                backgroundColor: "#1f2937",
-                border: "1px solid #374151",
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                border: "1px solid #e5e7eb",
                 borderRadius: "12px",
+                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
               }}
-              labelStyle={{ color: "#9ca3af" }}
+              itemStyle={{ color: "#111827" }}
+              labelStyle={{ color: "#4b5563" }}
             />
             <Area
               type="monotone"

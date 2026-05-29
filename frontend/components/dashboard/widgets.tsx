@@ -1,8 +1,10 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { TrendingUp, TrendingDown, DollarSign, Percent, BarChart3, Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { getMacroWidgets, type MacroWidgetData } from "@/lib/api"
 
 interface MarketWidgetProps {
   title: string
@@ -122,6 +124,7 @@ function MarketWidget({ title, value, change, changePercent, data }: MarketWidge
                 />
               </linearGradient>
             </defs>
+            <YAxis domain={["dataMin", "dataMax"]} hide />
             <Area
               type="monotone"
               dataKey="value"
@@ -193,16 +196,69 @@ function KPICard({
 }
 
 export function DashboardWidgets() {
+  const [macroData, setMacroData] = useState<MacroWidgetData | null>(null)
+
+  useEffect(() => {
+    getMacroWidgets()
+      .then((res) => {
+        setMacroData(res)
+      })
+      .catch(() => {})
+  }, [])
+
+  const kospi = macroData?.kospi
+    ? {
+        title: "KOSPI",
+        value: macroData.kospi.value.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        change: macroData.kospi.change,
+        changePercent: macroData.kospi.changePercent,
+        data: macroData.kospi.data
+      }
+    : marketData.kospi
+
+  const nasdaq = macroData?.nasdaq
+    ? {
+        title: "NASDAQ",
+        value: macroData.nasdaq.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        change: macroData.nasdaq.change,
+        changePercent: macroData.nasdaq.changePercent,
+        data: macroData.nasdaq.data
+      }
+    : marketData.nasdaq
+
+  const sp500 = macroData?.sp500
+    ? {
+        title: "S&P 500",
+        value: macroData.sp500.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        change: macroData.sp500.change,
+        changePercent: macroData.sp500.changePercent,
+        data: macroData.sp500.data
+      }
+    : marketData.sp500
+
+  const usdkrw = macroData?.usdkrw
+    ? {
+        title: "USD/KRW",
+        value: macroData.usdkrw.value.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        change: macroData.usdkrw.change,
+        changePercent: macroData.usdkrw.changePercent,
+        data: macroData.usdkrw.data
+      }
+    : marketData.usdkrw
+
   return (
     <div className="space-y-6">
       {/* Market Indices */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-foreground">주요 지수</h2>
+        <div className="mb-4 flex items-baseline gap-2">
+          <h2 className="text-lg font-semibold text-foreground">주요 지수</h2>
+          <span className="text-xs text-muted-foreground">(2026.04.30 기준)</span>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MarketWidget {...marketData.kospi} />
-          <MarketWidget {...marketData.nasdaq} />
-          <MarketWidget {...marketData.sp500} />
-          <MarketWidget {...marketData.usdkrw} />
+          <MarketWidget {...kospi} />
+          <MarketWidget {...nasdaq} />
+          <MarketWidget {...sp500} />
+          <MarketWidget {...usdkrw} />
         </div>
       </div>
 

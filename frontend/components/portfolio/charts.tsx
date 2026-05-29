@@ -311,9 +311,17 @@ export function RiskIndicator({
 
 export function HoldingsTable({
   holdings,
+  onEdit,
 }: {
   holdings: PortfolioAssetSummary[]
+  onEdit?: (holding: PortfolioAssetSummary) => void
 }) {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("ko-KR", {
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
   return (
     <div className="glass-card overflow-hidden rounded-2xl">
       <div className="p-6">
@@ -331,6 +339,9 @@ export function HoldingsTable({
                 종목
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                보유 주수
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 평가금액
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -342,6 +353,11 @@ export function HoldingsTable({
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 손익
               </th>
+              {onEdit && (
+                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  관리
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -363,8 +379,13 @@ export function HoldingsTable({
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right">
+                  <span className="text-foreground">
+                    {holding.quantity.toLocaleString("ko-KR")}주
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-right">
                   <span className="font-medium text-foreground">
-                    {formatCurrency(holding.valuationAmount)}
+                    ₩{formatCurrency(holding.valuationAmount)}
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right">
@@ -399,9 +420,20 @@ export function HoldingsTable({
                     )}
                   >
                     {holding.profitLoss >= 0 ? "+" : ""}
-                    {formatCurrency(holding.profitLoss)}
+                    ₩{formatCurrency(holding.profitLoss)}
                   </span>
                 </td>
+                {onEdit && (
+                  <td className="whitespace-nowrap px-6 py-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onEdit(holding)}
+                      className="text-xs text-primary font-semibold hover:underline bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-lg transition-colors"
+                    >
+                      수정
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

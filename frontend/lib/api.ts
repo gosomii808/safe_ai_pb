@@ -37,6 +37,7 @@ export interface PortfolioAssetSummary {
   returnRate: number | null
   priceDate: string
   riskComment: string
+  quantity: number
 }
 
 export interface PortfolioAnalysisResponse {
@@ -165,6 +166,25 @@ export async function getPortfolioAnalysis(
   return response.json()
 }
 
+export interface MacroWidgetData {
+  kospi: { value: number; change: number; changePercent: number; data: { time: string; value: number }[] }
+  nasdaq: { value: number; change: number; changePercent: number; data: { time: string; value: number }[] }
+  sp500: { value: number; change: number; changePercent: number; data: { time: string; value: number }[] }
+  usdkrw: { value: number; change: number; changePercent: number; data: { time: string; value: number }[] }
+}
+
+export async function getMacroWidgets(): Promise<MacroWidgetData> {
+  const response = await fetch(`${API_BASE_URL}/portfolio/macro-widgets`, {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
 export async function loginUser(
   email: string,
   password: string
@@ -191,6 +211,92 @@ export async function getSecurityOverview(
   const response = await fetch(
     `${API_BASE_URL}/security/overview?${params.toString()}`,
     { cache: "no-store" }
+  )
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export interface EditableAsset {
+  id?: string
+  market: string
+  ticker: string
+  stockName?: string | null
+  sector?: string | null
+  quantity: number
+  avgBuyPrice: number
+  investmentAmount?: number
+  targetRatio?: number
+}
+
+export async function getPortfolioAssets(
+  userId: string
+): Promise<any[]> {
+  const response = await fetch(`${API_BASE_URL}/portfolio/${userId}/assets`, {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export async function addPortfolioAsset(
+  userId: string,
+  asset: EditableAsset
+): Promise<{ id: string; message: string }> {
+  const response = await fetch(`${API_BASE_URL}/portfolio/${userId}/assets`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(asset),
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export async function updatePortfolioAsset(
+  userId: string,
+  assetId: string,
+  asset: EditableAsset
+): Promise<{ message: string }> {
+  const response = await fetch(
+    `${API_BASE_URL}/portfolio/${userId}/assets/${assetId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(asset),
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return response.json()
+}
+
+export async function deletePortfolioAsset(
+  userId: string,
+  assetId: string
+): Promise<{ message: string }> {
+  const response = await fetch(
+    `${API_BASE_URL}/portfolio/${userId}/assets/${assetId}`,
+    {
+      method: "DELETE",
+    }
   )
 
   if (!response.ok) {

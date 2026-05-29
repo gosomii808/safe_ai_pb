@@ -33,6 +33,7 @@ type AssetSummary = {
   returnRate: number | null;
   priceDate: string;
   riskComment: string;
+  quantity: number;
 };
 
 const DOMESTIC_MARKETS = new Set(['KRX', 'KOSPI', 'KOSDAQ', 'KONEX']);
@@ -45,6 +46,166 @@ export class PortfolioService {
     private readonly prisma: PrismaService,
     private readonly encryptionService: EncryptionService,
   ) {}
+
+  async getMacroWidgets() {
+    const analysisDate = '2026-04-30';
+    const rows = await this.prisma.$queryRaw<any[]>`
+      SELECT
+        date,
+        kospi_index as kospiIndex,
+        sp500_index as sp500Index,
+        nasdaq_index as nasdaqIndex,
+        usd_krw as usdKrw
+      FROM daily_market_macro_prices
+      WHERE date <= ${analysisDate}
+      ORDER BY date DESC
+      LIMIT 90
+    `.catch(() => []);
+
+    if (!rows.length) {
+      return {
+        kospi: { value: 0, change: 0, changePercent: 0, data: [] },
+        nasdaq: { value: 0, change: 0, changePercent: 0, data: [] },
+        sp500: { value: 0, change: 0, changePercent: 0, data: [] },
+        usdkrw: { value: 0, change: 0, changePercent: 0, data: [] },
+      };
+    }
+
+    const sorted = [...rows].reverse();
+    const latest = sorted[sorted.length - 1];
+    const prev = sorted[sorted.length - 2] || latest;
+
+    const makeData = (key: string) => {
+      return sorted.map((row) => ({
+        time: typeof row.date === 'string' ? row.date.slice(5, 10) : new Date(row.date).toISOString().slice(5, 10),
+        value: Number(row[key]) || 0,
+      }));
+    };
+
+    const getStats = (key: string) => {
+      const latestVal = Number(latest[key]) || 0;
+      const prevVal = Number(prev[key]) || latestVal;
+      const change = latestVal - prevVal;
+      const changePercent = prevVal > 0 ? (change / prevVal) * 100 : 0;
+      return {
+        value: latestVal,
+        change,
+        changePercent,
+        data: makeData(key),
+      };
+    };
+
+    return {
+      kospi: getStats('kospiIndex'),
+      nasdaq: getStats('nasdaqIndex'),
+      sp500: getStats('sp500Index'),
+      usdkrw: getStats('usdKrw'),
+    };
+  }
+
+  async getAssets(userId: string) {
+    const assets = await this.prisma.portfolioAsset.findMany({
+      where: { userId },
+    });
+
+    return assets.map((asset: any) => ({
+      id: asset.id,
+      market: asset.market,
+      ticker: asset.ticker,
+      stockName: asset.stockName,
+      sector: asset.sector,
+      quantity: this.decryptNumber(asset.quantity),
+      avgBuyPrice: this.decryptOptionalNumber(asset.avgBuyPrice),
+      investmentAmount: this.decryptOptionalNumber(asset.investmentAmount),
+      targetRatio: asset.targetRatio,
+      createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
+    }));
+  }
+
+  async addAsset(userId: string, data: any) {
+    const id = require('node:crypto').randomUUID();
+    const now = new Date().toISOString();
+    const quantityEnc = this.encryptionService.encrypt(data.quantity);
+    const avgBuyPriceEnc = this.encryptionService.encrypt(data.avgBuyPrice);
+    const investmentAmountEnc = this.encryptionService.encrypt(
+      data.investmentAmount || Number(data.quantity) * Number(data.avgBuyPrice),
+    );
+
+    await this.prisma.$queryRaw`
+      INSERT INTO "PortfolioAsset" (
+        id, userId, market, ticker, stockName, sector, quantity, avgBuyPrice,
+        investmentAmount, targetRatio, createdAt, updatedAt
+      ) VALUES (${id}, ${userId}, ${data.market}, ${data.ticker}, ${data.stockName || null}, ${data.sector || null}, ${quantityEnc}, ${avgBuyPriceEnc}, ${investmentAmountEnc}, ${data.targetRatio || null}, ${now}, ${now})
+    `;
+
+    await this.prisma.accessLog.create({
+      data: {
+        userId,
+        action: 'PORTFOLIO_UPDATE',
+        endpoint: `/portfolio/${userId}/assets`,
+        method: 'POST',
+        success: true,
+      },
+    });
+
+    return { id, message: '자산이 성공적으로 추가되었습니다.' };
+  }
+
+  async updateAsset(userId: string, assetId: string, data: any) {
+    const now = new Date().toISOString();
+    const quantityEnc = this.encryptionService.encrypt(data.quantity);
+    const avgBuyPriceEnc = this.encryptionService.encrypt(data.avgBuyPrice);
+    const investmentAmountEnc = this.encryptionService.encrypt(
+      data.investmentAmount || Number(data.quantity) * Number(data.avgBuyPrice),
+    );
+
+    await this.prisma.$queryRaw`
+      UPDATE "PortfolioAsset"
+      SET
+        market = ${data.market},
+        ticker = ${data.ticker},
+        stockName = ${data.stockName || null},
+        sector = ${data.sector || null},
+        quantity = ${quantityEnc},
+        avgBuyPrice = ${avgBuyPriceEnc},
+        investmentAmount = ${investmentAmountEnc},
+        targetRatio = ${data.targetRatio || null},
+        updatedAt = ${now}
+      WHERE id = ${assetId} AND userId = ${userId}
+    `;
+
+    await this.prisma.accessLog.create({
+      data: {
+        userId,
+        action: 'PORTFOLIO_UPDATE',
+        endpoint: `/portfolio/${userId}/assets/${assetId}`,
+        method: 'PATCH',
+        success: true,
+      },
+    });
+
+    return { message: '자산이 성공적으로 수정되었습니다.' };
+  }
+
+  async deleteAsset(userId: string, assetId: string) {
+    await this.prisma.$queryRaw`
+      DELETE FROM "PortfolioAsset"
+      WHERE id = ${assetId} AND userId = ${userId}
+    `;
+
+    await this.prisma.accessLog.create({
+      data: {
+        userId,
+        action: 'PORTFOLIO_UPDATE',
+        endpoint: `/portfolio/${userId}/assets/${assetId}`,
+        method: 'DELETE',
+        success: true,
+      },
+    });
+
+    return { message: '자산이 성공적으로 삭제되었습니다.' };
+  }
 
   async analyzePortfolio(userId: string, analysisDate?: string) {
     const resolvedAnalysisDate = this.resolveAnalysisDate(analysisDate);
@@ -122,6 +283,7 @@ export class PortfolioService {
             : (price as LatestOverseasPrice).priceDate,
         ),
         riskComment: '',
+        quantity,
       });
     }
 
@@ -214,6 +376,7 @@ export class PortfolioService {
         returnRate: this.roundNullable(asset.returnRate),
         priceDate: asset.priceDate,
         riskComment: asset.riskComment,
+        quantity: asset.quantity,
       })),
       missingData,
       summary,

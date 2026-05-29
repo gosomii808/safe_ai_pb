@@ -21,7 +21,7 @@ import {
   Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { getLatestAiReport } from "@/lib/api";
+import { getLatestAiReport, getPortfolioAssets } from "@/lib/api";
 import type {
   AiReportResponse,
   AiReportCard,
@@ -96,6 +96,7 @@ export default function AiReportPage() {
   const userId = useUserId();
   const [userIdResolved, setUserIdResolved] = useState(false);
   const [report, setReport] = useState<AiReportResponse | null>(null);
+  const [rawAssets, setRawAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,9 +114,15 @@ export default function AiReportPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getLatestAiReport(userId)
-      .then((res) => {
-        if (!cancelled) setReport(res);
+    Promise.all([
+      getLatestAiReport(userId),
+      getPortfolioAssets(userId).catch(() => [])
+    ])
+      .then(([reportRes, assetsRes]) => {
+        if (!cancelled) {
+          setReport(reportRes);
+          setRawAssets(assetsRes);
+        }
       })
       .catch((e: Error) => {
         if (!cancelled) setError(e.message);
@@ -211,6 +218,37 @@ export default function AiReportPage() {
           </p>
         )}
       </section>
+
+      {/* 보유 주수 확인 (민감 정보 정책에 따라 사용자 본인 화면에서만 제한적으로 노출) */}
+      {rawAssets.length > 0 && (
+        <section className="mt-6 rounded-2xl border border-white/5 bg-[#161b22] p-5">
+          <details className="group">
+            <summary className="flex items-center justify-between cursor-pointer list-none select-none">
+              <div className="flex items-center gap-2 text-green-400">
+                <Shield className="h-4 w-4 text-green-400" />
+                <span className="font-semibold text-sm">보안인증 보유 주수 확인 (민감정보 보호)</span>
+              </div>
+              <span className="text-xs text-gray-400 group-open:rotate-180 transition-transform">
+                ▼
+              </span>
+            </summary>
+            <div className="mt-4 border-t border-white/5 pt-3">
+              <p className="text-xs text-gray-400 mb-3 leading-normal">
+                민감 정보 보안 정책에 따라 외부 AI 엔진과의 API 통신 시에는 상세 보유 주수가 노출되지 않으며, 오직 본인 인증된 현재 대시보드 화면에서만 안전하게 표시됩니다.
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {rawAssets.map((asset) => (
+                  <div key={`${asset.market}-${asset.ticker}`} className="bg-black/20 rounded-xl p-3 border border-white/5">
+                    <p className="text-xs font-semibold text-white truncate">{asset.stockName || asset.ticker}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{asset.ticker} · {asset.market}</p>
+                    <p className="text-sm font-bold text-green-400 mt-2">{asset.quantity.toLocaleString("ko-KR")} 주</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </details>
+        </section>
+      )}
 
       {/* 단기 흐름 분석 카드 */}
       {report.trendAnalysis && (

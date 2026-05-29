@@ -81,6 +81,7 @@ const marketData = {
 
 function MarketWidget({ title, value, change, changePercent, data }: MarketWidgetProps) {
   const isPositive = change >= 0
+  const safeId = title.replace(/[^a-zA-Z0-9-_]/g, "-")
 
   return (
     <div className="glass-card group rounded-2xl p-5 transition-all hover:scale-[1.02]">
@@ -111,7 +112,7 @@ function MarketWidget({ title, value, change, changePercent, data }: MarketWidge
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
-              <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={`gradient-${safeId}`} x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="0%"
                   stopColor={isPositive ? "#22c55e" : "#ef4444"}
@@ -130,7 +131,7 @@ function MarketWidget({ title, value, change, changePercent, data }: MarketWidge
               dataKey="value"
               stroke={isPositive ? "#22c55e" : "#ef4444"}
               strokeWidth={2}
-              fill={`url(#gradient-${title})`}
+              fill={`url(#gradient-${safeId})`}
             />
           </AreaChart>
         </ResponsiveContainer>

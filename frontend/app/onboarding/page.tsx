@@ -74,7 +74,7 @@ export default function OnboardingPage() {
       <div className="mx-auto flex w-full max-w-2xl items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
           <img
-            src="/arch_logo.jpg"
+            src="/arch_logo.png"
             alt="Arch"
             className="h-9 w-9 rounded-xl object-cover"
           />

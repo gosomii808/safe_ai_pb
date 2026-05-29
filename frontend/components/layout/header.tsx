@@ -36,7 +36,7 @@ export function Header() {
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-lg lg:px-6">
         <div className="flex items-center gap-4 lg:hidden">
           <img
-            src="/arch_logo.jpg"
+            src="/arch_logo.png"
             alt="Arch"
             className="h-8 w-8 rounded-lg object-cover"
           />

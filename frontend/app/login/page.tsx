@@ -151,7 +151,7 @@ function Brand() {
   return (
     <div className="flex items-center gap-3">
       <img
-        src="/arch_logo.jpg"
+        src="/arch_logo.png"
         alt="Arch"
         className="h-10 w-10 rounded-xl object-cover"
       />

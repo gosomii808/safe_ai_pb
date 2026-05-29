@@ -30,7 +30,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-border bg-sidebar lg:flex">
       <div className="flex h-16 items-center gap-3 border-b border-border px-6">
         <img
-          src="/arch_logo.jpg"
+          src="/arch_logo.png"
           alt="Arch"
           className="h-9 w-9 rounded-xl object-cover"
         />

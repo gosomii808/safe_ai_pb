@@ -177,7 +177,7 @@ function ProtectionSummary({
             </div>
             <span
               className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-medium",
+                "rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap shrink-0",
                 item.active
                   ? "bg-green-500/10 text-green-400"
                   : "bg-yellow-500/10 text-yellow-400"
